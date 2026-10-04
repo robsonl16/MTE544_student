@@ -43,7 +43,7 @@ class motion_executioner(Node):
                 
         # loggers
         self.imu_logger=Logger('imu_content_'+str(motion_types[motion_type])+'.csv', headers=["acc_x", "acc_y", "angular_z", "stamp"])
-        self.odom_logger=Logger('odom_content_'+str(motion_types[motion_type])+'.csv', headers=["x","y","th", "stamp"])
+        self.odom_logger=Logger('odom_content_'+str(motion_types[motion_type])+'.csv', headers=["x","y","th", "stamp"]) #can get twist from this message. do we not need?
         self.laser_logger=Logger('laser_content_'+str(motion_types[motion_type])+'.csv', headers=["ranges", "angle_increment", "stamp"])
         
         # TODO In Lab: Setup the QoS profile for the actual robot 
@@ -52,16 +52,13 @@ class motion_executioner(Node):
 
         # TODO Part 5: Create below the subscription to the topics corresponding to the respective sensors
         # IMU subscription
-        
-        ...
+        self.imu_sub=self.create_subscription(msg_type=Imu, topic='imu', callback=self.imu_callback, qos_profile=qos)
         
         # ENCODER subscription
-
-        ...
+        self.odom_sub=self.create_subscription(msg_type=Odometry, topic='odom', callback=self.odom_callback, qos_profile=qos)
         
         # LaserScan subscription 
-        
-        ...
+        self.laser_sub=self.create_subscription(msg_type=LaserScan, topic='scan', callback=self.laser_callback, qos_profile=qos)
         
         self.create_timer(0.1, self.timer_callback)
 
@@ -73,16 +70,41 @@ class motion_executioner(Node):
     # You can save the needed fields into a list, and pass the list to the log_values function in utilities.py
 
     def imu_callback(self, imu_msg: Imu):
-        ...    # log imu msgs
-        
+        # log imu msgs
+        log_entry = {
+            "acc_x": imu_msg.linear_acceleration.x,
+            "acc_y": imu_msg.linear_acceleration.y,
+            "angular_z": imu_msg.angular_velocity.z,
+            "stamp": Time.from_msg(imu_msg.header.stamp).nanoseconds
+        }
+        self.imu_logger.log_values(log_entry)
+
+
     def odom_callback(self, odom_msg: Odometry):
-        
-        ... # log odom msgs
+        # log odom msgs
+        position = odom_msg.pose.pose.position
+        orientation = odom_msg.pose.pose.orientation
+        yaw = euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
+        log_entry = {
+            "x": position.x,
+            "y": position.y,
+            "th": yaw,
+            "stamp": Time.from_msg(odom_msg.header.stamp).nanoseconds
+        }
+        self.odom_logger.log_values(log_entry)
                 
     def laser_callback(self, laser_msg: LaserScan):
-        
-        ... # log laser msgs with position msg at that time
-                
+        # log laser msgs with position msg at that time
+        timestamp = Time.from_msg(laser_msg.header.stamp).nanoseconds
+        ranges = list(laser_msg.ranges)
+        angle_increment = laser_msg.angle_increment
+        log_entry = {
+            "ranges": ranges,
+            "angle_increment": angle_increment,
+            "stamp": timestamp
+        }
+        self.laser_logger.log_values(log_entry)
+
     def timer_callback(self):
         
         if self.odom_initialized and self.laser_initialized and self.imu_initialized:
@@ -149,8 +171,8 @@ if __name__=="__main__":
     args = argParser.parse_args()
 
     if args.motion.lower() == "circle":
-
         ME=motion_executioner(motion_type=CIRCLE)
+
     elif args.motion.lower() == "line":
         ME=motion_executioner(motion_type=ACC_LINE)
 
@@ -158,7 +180,7 @@ if __name__=="__main__":
         ME=motion_executioner(motion_type=SPIRAL)
 
     else:
-        print(f"we don't have {arg.motion.lower()} motion type")
+        print(f"we don't have {args.motion.lower()} motion type")
 
 
     
