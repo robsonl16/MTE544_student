@@ -34,6 +34,9 @@ class motion_executioner(Node):
         self.imu_initialized=False
         self.odom_initialized=False
         self.laser_initialized=False
+
+        self.spiral_speed = 0.0
+        self.linear_acc_speed = 0.0
         
         # Create a publisher to send velocity commands. Set queue size to 10
         self.vel_publisher=self.create_publisher(msg_type=Twist, topic='cmd_vel', qos_profile=10)
@@ -106,22 +109,27 @@ class motion_executioner(Node):
         self.vel_publisher.publish(cmd_vel_msg)
         
     
-    # TODO Part 4: Motion functions: complete the functions to generate the proper messages corresponding to the desired motions of the robot
+    # Motion functions
 
     def make_circular_twist(self):
         
         msg=Twist()
-        ... # fill up the twist msg for circular motion
+        msg.linear.x=0.2
+        msg.angular.z=0.2
         return msg
 
     def make_spiral_twist(self):
         msg=Twist()
-        ... # fill up the twist msg for spiral motion
+        spiral_speed=min(self.spiral_speed+0.01, 0.2)
+        msg.linear.x=spiral_speed
+        msg.angular.z=0.3
         return msg
     
     def make_acc_line_twist(self):
         msg=Twist()
-        ... # fill up the twist msg for line motion
+        linear_acc_speed=min(self.linear_acc_speed+0.01, 0.2)
+        msg.linear.x=linear_acc_speed
+        msg.angular.z=0.0
         return msg
 
 import argparse
