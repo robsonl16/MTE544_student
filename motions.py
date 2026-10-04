@@ -35,8 +35,8 @@ class motion_executioner(Node):
         self.odom_initialized=False
         self.laser_initialized=False
         
-        # TODO Part 3: Create a publisher to send velocity commands by setting the proper parameters in (...)
-        self.vel_publisher=self.create_publisher(...)
+        # Create a publisher to send velocity commands. Set queue size to 10
+        self.vel_publisher=self.create_publisher(msg_type=Twist, topic='cmd_vel', qos_profile=10)
                 
         # loggers
         self.imu_logger=Logger('imu_content_'+str(motion_types[motion_type])+'.csv', headers=["acc_x", "acc_y", "angular_z", "stamp"])
