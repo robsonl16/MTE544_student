@@ -49,16 +49,18 @@ class motion_executioner(Node):
         # TODO In Lab: Setup the QoS profile for the actual robot 
         # These are settings from simulation running `ros2 topic info /odom --verbose``
         qos=QoSProfile(history=HistoryPolicy.KEEP_LAST, depth=10, reliability=ReliabilityPolicy.RELIABLE, durability=DurabilityPolicy.VOLATILE)
-
+        qos_lab_imu=QoSProfile(history=HistoryPolicy.KEEP_LAST, depth=10, reliability=ReliabilityPolicy.BEST_EFFORT, durability=DurabilityPolicy.VOLATILE)
+        qos_lab_odom=QoSProfile(history=HistoryPolicy.KEEP_LAST, depth=10, reliability=ReliabilityPolicy.BEST_EFFORT, durability=DurabilityPolicy.VOLATILE)
+        qos_lab_laser=QoSProfile(history=HistoryPolicy.KEEP_LAST, depth=10, reliability=ReliabilityPolicy.RELIABLE, durability=DurabilityPolicy.VOLATILE)
         # TODO Part 5: Create below the subscription to the topics corresponding to the respective sensors
         # IMU subscription
-        self.imu_sub=self.create_subscription(msg_type=Imu, topic='imu', callback=self.imu_callback, qos_profile=qos)
+        self.imu_sub=self.create_subscription(msg_type=Imu, topic='imu', callback=self.imu_callback, qos_profile=qos_lab_imu)
         
         # ENCODER subscription
-        self.odom_sub=self.create_subscription(msg_type=Odometry, topic='odom', callback=self.odom_callback, qos_profile=qos)
+        self.odom_sub=self.create_subscription(msg_type=Odometry, topic='odom', callback=self.odom_callback, qos_profile=qos_lab_odom)
         
         # LaserScan subscription 
-        self.laser_sub=self.create_subscription(msg_type=LaserScan, topic='scan', callback=self.laser_callback, qos_profile=qos)
+        self.laser_sub=self.create_subscription(msg_type=LaserScan, topic='scan', callback=self.laser_callback, qos_profile=qos_lab_laser)
         
         self.create_timer(0.1, self.timer_callback)
 
@@ -140,20 +142,20 @@ class motion_executioner(Node):
         
         msg=Twist()
         msg.linear.x=0.2
-        msg.angular.z=0.2
+        msg.angular.z=0.8
         return msg
 
     def make_spiral_twist(self):
         msg=Twist()
-        spiral_speed=min(self.spiral_speed+0.01, 0.2)
-        msg.linear.x=spiral_speed
-        msg.angular.z=0.3
+        self.spiral_speed=min(self.spiral_speed+0.001, 0.2)
+        msg.linear.x=self.spiral_speed
+        msg.angular.z=0.4
         return msg
     
     def make_acc_line_twist(self):
         msg=Twist()
-        linear_acc_speed=min(self.linear_acc_speed+0.01, 0.2)
-        msg.linear.x=linear_acc_speed
+        self.linear_acc_speed=min(self.linear_acc_speed+0.01, 0.8)
+        msg.linear.x=self.linear_acc_speed
         msg.angular.z=0.0
         return msg
 
