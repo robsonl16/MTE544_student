@@ -28,7 +28,7 @@ class Logger:
                 if isinstance(val, (list, tuple)):
                     val=" ".join(str(v) for v in val)
                 vals_str+=str(val)
-                vals_Str+=", "
+                vals_str+=", "
             
             vals_str+="\n"
             
