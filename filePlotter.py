@@ -24,27 +24,31 @@ def format_title(filename):
     return f"{SENSOR_NAMES.get(sensor, sensor)} Data: {motion.capitalize()} Motion"
 
 
-def plot_laser(filename, headers, values, num_scans=3):
-    # Convert ranges to cartesian points in the laser frame: theta_i = i * angle_increment
+def clean_scan(ranges, angle_increment, angle_min=0.0):
+    # Convert one range row to cartesian points in the laser frame.
+    # The i-th range is measured at theta_i = angle_min + i * angle_increment, so
+    # x_i = r_i * cos(theta_i), y_i = r_i * sin(theta_i).
+    # Out of range readings come back as inf (or nan) and are dropped here.
+    xs, ys = [], []
+    for i, r in enumerate(ranges):
+        if not math.isfinite(r):
+            continue
+        theta = angle_min + i * angle_increment
+        xs.append(r * math.cos(theta))
+        ys.append(r * math.sin(theta))
+    return xs, ys
+
+
+def plot_laser(filename, headers, values, scan_index=0):
+    # Plot a single scan (one row of the range matrix) as cartesian points.
     # (angle_min isn't logged, so 0 is assumed; for a full 360 deg scan this only rotates the plot)
-    plt.title(format_title(filename) + " (scans in LIDAR frame)")
-    ranges_idx = headers.index("ranges")
-    inc_idx = headers.index("angle_increment")
-    first_stamp = values[0][-1]
+    row = values[scan_index]
+    t = (row[-1] - values[0][-1]) / 1e9
+    xs, ys = clean_scan(row[headers.index("ranges")], row[headers.index("angle_increment")])
 
-    # Plot a few scans spread across the run (first, middle, last, ...)
-    step = max(1, (len(values) - 1) // max(1, num_scans - 1))
-    markers = ['o', 's', '^', 'x', 'd']
-    for n, row in enumerate(values[::step][:num_scans]):
-        xs, ys = [], []
-        for i, r in enumerate(row[ranges_idx]):
-            if math.isfinite(r):
-                theta = i * row[inc_idx]
-                xs.append(r * math.cos(theta))
-                ys.append(r * math.sin(theta))
-        t = (row[-1] - first_stamp) / 1e9
-        plt.scatter(xs, ys, s=4, marker=markers[n % len(markers)], label=f"scan at t = {t:.1f} s")
-
+    dropped = len(row[headers.index("ranges")]) - len(xs)
+    plt.title(format_title(filename) + f" (scan {scan_index} at t = {t:.1f} s, LIDAR frame)")
+    plt.scatter(xs, ys, s=6, c="tab:blue", label=f"{len(xs)} valid points ({dropped} NaN/Inf removed)")
     plt.scatter([0], [0], c='k', marker='*', s=80, label="robot (lidar origin)")
     plt.xlabel("x [m]")
     plt.ylabel("y [m]")
