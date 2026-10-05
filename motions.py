@@ -71,6 +71,7 @@ class motion_executioner(Node):
 
     def imu_callback(self, imu_msg: Imu):
         # log imu msgs
+        self.imu_initialized=True
         log_entry = {
             "acc_x": imu_msg.linear_acceleration.x,
             "acc_y": imu_msg.linear_acceleration.y,
@@ -82,6 +83,7 @@ class motion_executioner(Node):
 
     def odom_callback(self, odom_msg: Odometry):
         # log odom msgs
+        self.odom_initialized=True
         position = odom_msg.pose.pose.position
         orientation = odom_msg.pose.pose.orientation
         yaw = euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
@@ -95,6 +97,7 @@ class motion_executioner(Node):
                 
     def laser_callback(self, laser_msg: LaserScan):
         # log laser msgs with position msg at that time
+        self.laser_initialized=True
         timestamp = Time.from_msg(laser_msg.header.stamp).nanoseconds
         ranges = list(laser_msg.ranges)
         angle_increment = laser_msg.angle_increment
