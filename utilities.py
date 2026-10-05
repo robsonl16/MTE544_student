@@ -76,7 +76,11 @@ class FileReader:
                 for val in values:
                     if val=='':
                         break
-                    row.append(float(val.strip()))
+                    value = val.strip()
+                    if ' ' in value:
+                        row.append([float(scan_value) for scan_value in value.split()])
+                    else:
+                        row.append(float(value))
 
                 table.append(row)
         
