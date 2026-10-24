@@ -29,8 +29,8 @@ class decision_maker(Node):
 
         super().__init__("decision_maker")
 
-        #TODO Part 4: Create a publisher for the topic responsible for robot's motion
-        self.publisher=... 
+        # Part 4: Create a publisher for the topic responsible for robot's motion
+        self.vel_publisher=self.create_publisher(msg_type=Twist, topic='cmd_vel', qos_profile=10)
 
         publishing_period=1/rate
         
