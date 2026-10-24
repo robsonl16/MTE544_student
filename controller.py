@@ -28,10 +28,12 @@ class controller:
         linear_vel=self.PID_linear.update([e_lin, pose[3]], status)
         angular_vel=self.PID_angular.update([e_ang, pose[3]], status)
         
-        # TODO Part 4: Add saturation limits for the robot linear and angular velocity
+        # Part 4: Add saturation limits for the robot linear and angular velocity
+        MAX_LINEAR_VEL_SIM=0.22
+        MAX_ANGULAR_VEL_SIM=2.84
 
-        linear_vel = ... if linear_vel > 1.0 else linear_vel
-        angular_vel= ... if angular_vel > 1.0 else angular_vel
+        linear_vel  = float(np.clip(linear_vel,  -MAX_LINEAR_VEL_SIM, MAX_LINEAR_VEL_SIM))
+        angular_vel = float(np.clip(angular_vel, -MAX_ANGULAR_VEL_SIM, MAX_ANGULAR_VEL_SIM))
         
         return linear_vel, angular_vel
     
