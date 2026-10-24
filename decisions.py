@@ -70,6 +70,10 @@ class decision_maker(Node):
             print("waiting for odom msgs ....")
             return
 
+        # take current pose, find closest point in trajectory to find where you are in the path
+        # self.goal will be a list of all the point you have to still reach
+        # if you are at the end of the trajectory, self.goal will be null
+
         vel_msg=Twist()
         
         # TODO Part 3: Check if you reached the goal
