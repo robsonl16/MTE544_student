@@ -28,9 +28,11 @@ class decision_maker(Node):
     def __init__(self, goalPoint, publisher_msg=Twist, publishing_topic='cmd_vel', qos_publisher=10, rate=10, motion_type=POINT_PLANNER):
 
         super().__init__("decision_maker")
-
+        qos = QoSProfile(reliability=ReliabilityPolicy.RELIABLE,
+                        history=HistoryPolicy.KEEP_LAST,
+                        depth=10)
         # Part 4: Create a publisher for the topic responsible for robot's motion
-        self.vel_publisher=self.create_publisher(msg_type=publisher_msg, topic=publishing_topic, qos_profile=qos_publisher)
+        self.publisher=self.create_publisher(msg_type=publisher_msg, topic=publishing_topic, qos_profile=qos)
 
         publishing_period=1/rate
         
@@ -92,7 +94,7 @@ class decision_maker(Node):
             
             #Part 3: exit the spin
             print("exiting the spin")
-            rclpy.shutdown()
+            shutdown()
             return
         
         velocity, yaw_rate = self.controller.vel_request(self.localizer.getPose(), self.goal, True)
