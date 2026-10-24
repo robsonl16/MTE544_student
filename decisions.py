@@ -25,12 +25,12 @@ from controller import controller, trajectoryController
 
 class decision_maker(Node):
     
-    def __init__(self, publisher_msg, publishing_topic, qos_publisher, goalPoint, rate=10, motion_type=POINT_PLANNER):
+    def __init__(self, goalPoint, publisher_msg=Twist, publishing_topic='cmd_vel', qos_publisher=10, rate=10, motion_type=POINT_PLANNER):
 
         super().__init__("decision_maker")
 
         # Part 4: Create a publisher for the topic responsible for robot's motion
-        self.vel_publisher=self.create_publisher(msg_type=Twist, topic='cmd_vel', qos_profile=10)
+        self.vel_publisher=self.create_publisher(msg_type=publisher_msg, topic=publishing_topic, qos_profile=qos_publisher)
 
         publishing_period=1/rate
         
@@ -62,7 +62,8 @@ class decision_maker(Node):
 
     def timerCallback(self):
         
-        # TODO Part 3: Run the localization node
+        # Part 3: Run the localization node
+        spin_once(self.localizer, timeout_sec=0)
         ...    # Remember that this file is already running the decision_maker node.
 
         if self.localizer.getPose()  is  None:
@@ -73,9 +74,9 @@ class decision_maker(Node):
         
         # TODO Part 3: Check if you reached the goal
         if type(self.goal) == list:
-            reached_goal=...
+            reached_goal=False
         else: 
-            reached_goal=...
+            reached_goal=True
         
 
         if reached_goal:
@@ -92,8 +93,10 @@ class decision_maker(Node):
         
         velocity, yaw_rate = self.controller.vel_request(self.localizer.getPose(), self.goal, True)
 
-        #TODO Part 4: Publish the velocity to move the robot
-        ... 
+        # Part 4: Publish the velocity to move the robot
+        vel_msg=Twist()
+        vel_msg.linear.x = velocity
+        vel_msg.angular.z = yaw_rate
 
 import argparse
 
@@ -108,11 +111,11 @@ def main(args=None):
     odom_qos=QoSProfile(reliability=2, durability=2, history=1, depth=10)
     # odom_qos=QoSProfile(history=HistoryPolicy.KEEP_LAST, depth=10, reliability=ReliabilityPolicy.BEST_EFFORT, durability=DurabilityPolicy.VOLATILE)
 
-    # TODO Part 4: instantiate the decision_maker with the proper parameters for moving the robot
+    # Part 4: instantiate the decision_maker with the proper parameters for moving the robot
     if args.motion.lower() == "point":
-        DM=decision_maker(...)
+        DM=decision_maker(goalPoint=[1.0, 1.0], publisher_msg=Twist, publishing_topic='cmd_vel', qos_publisher=odom_qos, rate=10, motion_type=POINT_PLANNER)
     elif args.motion.lower() == "trajectory":
-        DM=decision_maker(...)
+        DM=decision_maker(goalPoint=[1.0, 1.0], publisher_msg=Twist, publishing_topic='cmd_vel', qos_publisher=odom_qos, rate=10, motion_type=TRAJECTORY_PLANNER)
     else:
         print("invalid motion type", file=sys.stderr)        
     
