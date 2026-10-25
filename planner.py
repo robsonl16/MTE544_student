@@ -3,7 +3,6 @@ import numpy as np
 POINT_PLANNER=0; TRAJECTORY_PLANNER=1
 
 
-
 class planner:
     def __init__(self, type_):
 
@@ -14,10 +13,10 @@ class planner:
         self.goal_point=goalPoint
 
         if self.type==POINT_PLANNER:
-            return self.point_planner(goalPoint)
+            return self.point_planner(0)
         
         elif self.type==TRAJECTORY_PLANNER:
-            return self.trajectory_planner()
+            return self.trajectory_planner(1)
 
 
     def point_planner(self, goalPoint):
@@ -29,20 +28,19 @@ class planner:
     def trajectory_planner(self, trajectory_type=0, ):
         if trajectory_type == 0:
             # TODO Part 6: Implement parabola
-            goal_x = np.clip(self.goal_point[0], 0.0, 1.5)
-            x = np.linspace(0.0, goal_x, 0.1)
+            # goal_x = np.clip(self.goal_point[0], 0.0, 1.5)
+            x = np.linspace(0.0, 1.5, 0.05)
             y = x**2
             points = np.column_stack((x,y)).tolist()
             
             pass
         elif trajectory_type == 1:
             # TODO Part 6: Implement sigmoid
-            goal_x = np.clip(self.goal_point[0], 0.0, 2.5)
-            x = np.linspace(0.0, goal_x, 0.1)
+            # goal_x = np.clip(self.goal_point[0], 0.0, 2.5)
+            x = np.linspace(0.0, 2.5, 0.05)
             y = 2 / (1+np.exp(-2*x)) - 1
             points = np.column_stack((x,y)).tolist()
             
-        pass
         # the return should be a list of trajectory points: [ [x1,y1], ..., [xn,yn]]
-        # return 
+        return points
 

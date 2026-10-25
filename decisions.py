@@ -43,7 +43,6 @@ class decision_maker(Node):
             self.controller=controller(klp=0.2, klv=0.5, kap=0.8, kav=0.6)
             self.planner=planner(POINT_PLANNER)    
     
-    
         elif motion_type==TRAJECTORY_PLANNER:
             self.controller=trajectoryController(klp=0.2, klv=0.5, kap=0.8, kav=0.6)
             self.planner=planner(TRAJECTORY_PLANNER)
@@ -72,6 +71,8 @@ class decision_maker(Node):
             print("waiting for odom msgs ....")
             return
 
+        current_pose = self.localizer.getPose()
+
         # take current pose, find closest point in trajectory to find where you are in the path
         # self.goal will be a list of all the point you have to still reach
         # if you are at the end of the trajectory, self.goal will be null
@@ -80,9 +81,14 @@ class decision_maker(Node):
         
         # TODO Part 3: Check if you reached the goal
         if type(self.goal) == list:
-            reached_goal=False
+            # if goal is a list, we are following a trajectory of points
+            reached_goal=
         else: 
-            reached_goal=True
+            # else, point_planner mode, no list of points
+            # considered goal reached if less than 1cm and 2.5deg error
+            lin_error = calculate_linear_error(current_pose, self.goal)
+            ang_error = calculate_angular_error(current_pose, self.goal)
+            reached_goal = (lin_error < 0.01) and (ang_error < 0.04)
         
 
         if reached_goal:
