@@ -59,8 +59,8 @@ class trajectoryController(controller):
 
         # TODO Part 5: Add saturation limits for the robot linear and angular velocity
 
-        linear_vel = ... if linear_vel > ... else linear_vel
-        angular_vel= ... if angular_vel > ... else angular_vel
+        # linear_vel = ... if linear_vel > ... else linear_vel
+        # angular_vel= ... if angular_vel > ... else angular_vel
         
         return linear_vel, angular_vel
 

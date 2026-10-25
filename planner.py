@@ -9,14 +9,14 @@ class planner:
         self.type=type_
         self.goal_point=None
     
-    def plan(self, goalPoint=[-1.0, -1.0]):
+    def plan(self, goalPoint=[-2.0, -2.0]):
         self.goal_point=goalPoint
 
         if self.type==POINT_PLANNER:
-            return self.point_planner(0)
+            return self.point_planner(goalPoint)
         
         elif self.type==TRAJECTORY_PLANNER:
-            return self.trajectory_planner(1)
+            return self.trajectory_planner(0)
 
 
     def point_planner(self, goalPoint):
@@ -29,7 +29,7 @@ class planner:
         if trajectory_type == 0:
             # TODO Part 6: Implement parabola
             # goal_x = np.clip(self.goal_point[0], 0.0, 1.5)
-            x = np.linspace(0.0, 1.5, 0.05)
+            x = np.linspace(0.0, 1.5, 50)
             y = x**2
             points = np.column_stack((x,y)).tolist()
             
@@ -37,7 +37,7 @@ class planner:
         elif trajectory_type == 1:
             # TODO Part 6: Implement sigmoid
             # goal_x = np.clip(self.goal_point[0], 0.0, 2.5)
-            x = np.linspace(0.0, 2.5, 0.05)
+            x = np.linspace(0.0, 2.5, 50)
             y = 2 / (1+np.exp(-2*x)) - 1
             points = np.column_stack((x,y)).tolist()
             

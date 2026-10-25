@@ -59,13 +59,14 @@ class decision_maker(Node):
         self.goal=self.planner.plan(goalPoint)
 
         self.create_timer(publishing_period, self.timerCallback)
+        print('Decision maker node is initialized')
 
 
     def timerCallback(self):
         
         # Part 3: Run the localization node
         spin_once(self.localizer, timeout_sec=0)
-        ...    # Remember that this file is already running the decision_maker node.
+        # Remember that this file is already running the decision_maker node.
 
         if self.localizer.getPose()  is  None:
             print("waiting for odom msgs ....")
@@ -81,8 +82,9 @@ class decision_maker(Node):
         
         # TODO Part 3: Check if you reached the goal
         if type(self.goal) == list:
-            # if goal is a list, we are following a trajectory of points
-            reached_goal=
+            # if goal is a list, we are following a trajectory of points, determine if we reached last point
+            reached_goal=self.controller.lookFarFor(current_pose, self.goal) == self.goal[-1]
+
         else: 
             # else, point_planner mode, no list of points
             # considered goal reached if less than 1cm and 2.5deg error
@@ -109,6 +111,7 @@ class decision_maker(Node):
         vel_msg=Twist()
         vel_msg.linear.x = velocity
         vel_msg.angular.z = yaw_rate
+        self.publisher.publish(vel_msg)
 
 import argparse
 
