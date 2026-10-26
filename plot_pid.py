@@ -2,6 +2,7 @@
 Report plots for P / PID runs. For each run directory this makes four figures:
     {e-t, edot-t}, {x-t, y-t, th-t}, {x-y} and {e-edot}
 (linear and angular errors), and prints step-response metrics for tuning.
+Also plots requested/limited velocities automatically when velocities.csv exists.
 
 Each run directory must contain linear.csv and angular.csv as written by
 utilities.Logger (columns: e, e_dot, e_int, stamp[ns]), and optionally
@@ -17,6 +18,7 @@ Examples:
 """
 
 import argparse
+import csv
 import os
 
 import numpy as np
@@ -171,8 +173,51 @@ def save_fig(fig, save_dir, label, name):
         print(f"saved figure to {path}")
 
 
+def plot_velocities(filename, label, save_dir=None):
+    with open(filename, newline="") as stream:
+        rows = [{key.strip(): value.strip() for key, value in row.items()
+                 if key and key.strip()} for row in csv.DictReader(stream, skipinitialspace=True)]
+    if not rows:
+        raise ValueError(f"{filename}: no velocity samples")
+    # Subtract integer timestamps before converting to seconds.
+    stamps = [int(row["stamp"]) for row in rows]
+    time = np.array([stamp - stamps[0] for stamp in stamps]) / 1e9
+    fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True,
+                             constrained_layout=True)
+    fig.suptitle(f"{label}: controller velocity saturation")
+    for ax, name, unit in zip(axes, ("linear", "angular"), ("m/s", "rad/s")):
+        def column(suffix):
+            return np.array([float(row[f"{name}_{suffix}"]) for row in rows])
+
+        requested, command = [column(key) for key in ("requested", "command")]
+        clipped = requested != command
+        spacing = max(1, len(rows) // 20)
+        ax.plot(time, requested, "--o", color="tab:blue", markevery=spacing,
+                markersize=4, label="requested (before clipping)")
+        ax.plot(time, command, "-^", color="tab:orange", markevery=spacing,
+                markersize=4, label="command (after clipping)")
+        ax.scatter(time[clipped], command[clipped], color="red", marker="x",
+                   label="clipped", zorder=3)
+        ax.set_title(f"{name.capitalize()} velocity")
+        ax.set_ylabel(f"Velocity [{unit}]")
+        ax.grid(alpha=0.3)
+        ax.legend()
+        print(f"{name}: clipped {clipped.sum()}/{len(rows)} "
+              f"({clipped.mean():.1%}); peak |request| {np.max(np.abs(requested)):.4g} {unit}")
+    axes[-1].set_xlabel("Time [s]")
+    save_fig(fig, save_dir, label, "velocities")
+    return fig
+
+
+
 def plot_run(run_dir, label, ref=None, goal=None, save_dir=None):
-    """The four report figures for one run: {e-t, edot-t}, {x-t, y-t, th-t}, {x-y}, {e-edot}."""
+    """Report figures plus velocity saturation when a velocity log is present."""
+    velocity_path = os.path.join(run_dir, "velocities.csv")
+    if os.path.isfile(velocity_path):
+        plot_velocities(velocity_path, label, save_dir)
+    else:
+        print(f"skipping missing file {velocity_path}")
+
     errors = {}
     for ctrl in CONTROLLERS:
         path = os.path.join(run_dir, f"{ctrl}.csv")
