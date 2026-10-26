@@ -9,7 +9,8 @@ import numpy as np
 
 def plot_velocities(filename, save=None):
     with open(filename, newline="") as stream:
-        rows = list(csv.DictReader(stream))
+        rows = [{key.strip(): value.strip() for key, value in row.items()
+                 if key and key.strip()} for row in csv.DictReader(stream, skipinitialspace=True)]
     if not rows:
         raise ValueError(f"{filename}: no velocity samples")
     # Subtract integer timestamps before converting to seconds.
@@ -22,24 +23,20 @@ def plot_velocities(filename, save=None):
         def column(suffix):
             return np.array([float(row[f"{name}_{suffix}"]) for row in rows])
 
-        requested, command, limit = [column(key) for key in ("requested", "command", "limit")]
-        at_limit = column("at_limit").astype(bool)
-        clipped = column("clipped").astype(bool)
+        requested, command = [column(key) for key in ("requested", "command")]
+        clipped = requested != command
         spacing = max(1, len(rows) // 20)
         ax.plot(time, requested, "--o", color="tab:blue", markevery=spacing,
                 markersize=4, label="requested (before clipping)")
         ax.plot(time, command, "-^", color="tab:orange", markevery=spacing,
                 markersize=4, label="command (after clipping)")
-        ax.plot(time, limit, ":", color="black", label="± velocity limit")
-        ax.plot(time, -limit, ":", color="black")
-        ax.scatter(time[at_limit], command[at_limit], color="red", marker="x",
-                   label="at limit", zorder=3)
+        ax.scatter(time[clipped], command[clipped], color="red", marker="x",
+                   label="clipped", zorder=3)
         ax.set_title(f"{name.capitalize()} velocity")
         ax.set_ylabel(f"Velocity [{unit}]")
         ax.grid(alpha=0.3)
         ax.legend()
-        print(f"{name}: at limit {at_limit.sum()}/{len(rows)} samples "
-              f"({at_limit.mean():.1%}); clipped {clipped.sum()}/{len(rows)} "
+        print(f"{name}: clipped {clipped.sum()}/{len(rows)} "
               f"({clipped.mean():.1%}); peak |request| {np.max(np.abs(requested)):.4g} {unit}")
     axes[-1].set_xlabel("Time [s]")
     if save:

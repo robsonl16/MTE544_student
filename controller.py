@@ -2,7 +2,7 @@ import numpy as np
 
 
 from pid import PID_ctrl
-from utilities import euler_from_quaternion, calculate_angular_error, calculate_linear_error
+from utilities import Logger, euler_from_quaternion, calculate_angular_error, calculate_linear_error
 
 M_PI=3.1415926535
 
@@ -17,6 +17,21 @@ class controller:
         # TODO Part 5 and 6: Modify the below lines to test your PD, PI, and PID controller
         self.PID_linear=PID_ctrl(PID, klp, klv, kli, filename_="linear.csv")
         self.PID_angular=PID_ctrl(PID, kap, kav, kai, filename_="angular.csv")
+        self.max_linear_vel = 0.22  # m/s
+        self.max_angular_vel = 2.84  # rad/s
+        self.velocity_logger = Logger("velocities.csv", headers=[
+            "clipped", "linear_requested", "linear_command", "angular_requested",
+            "angular_command", "stamp"])
+
+    def limit_and_log(self, linear_requested, angular_requested, stamp):
+        linear_vel = float(np.clip(linear_requested, -self.max_linear_vel, self.max_linear_vel))
+        angular_vel = float(np.clip(angular_requested, -self.max_angular_vel, self.max_angular_vel))
+        self.velocity_logger.log_values([
+            int(abs(linear_requested) >= self.max_linear_vel or
+                abs(angular_requested) >= self.max_angular_vel),
+            linear_requested, linear_vel, angular_requested, angular_vel,
+            stamp.sec * 1_000_000_000 + stamp.nanosec])
+        return linear_vel, angular_vel
 
     
     def vel_request(self, pose, goal, status):
@@ -28,14 +43,7 @@ class controller:
         linear_vel=self.PID_linear.update([e_lin, pose[3]], status)
         angular_vel=self.PID_angular.update([e_ang, pose[3]], status)
         
-        # Part 4: Add saturation limits for the robot linear and angular velocity
-        MAX_LINEAR_VEL_SIM=0.22
-        MAX_ANGULAR_VEL_SIM=2.84
-
-        linear_vel  = float(np.clip(linear_vel,  -MAX_LINEAR_VEL_SIM, MAX_LINEAR_VEL_SIM))
-        angular_vel = float(np.clip(angular_vel, -MAX_ANGULAR_VEL_SIM, MAX_ANGULAR_VEL_SIM))
-        
-        return linear_vel, angular_vel
+        return self.limit_and_log(linear_vel, angular_vel, pose[3])
     
 
 class trajectoryController(controller):
@@ -57,12 +65,7 @@ class trajectoryController(controller):
         linear_vel=self.PID_linear.update([e_lin, pose[3]], status)
         angular_vel=self.PID_angular.update([e_ang, pose[3]], status) 
 
-        # TODO Part 5: Add saturation limits for the robot linear and angular velocity
-
-        # linear_vel = ... if linear_vel > ... else linear_vel
-        # angular_vel= ... if angular_vel > ... else angular_vel
-        
-        return linear_vel, angular_vel
+        return self.limit_and_log(linear_vel, angular_vel, pose[3])
 
     def lookFarFor(self, pose, listGoals):
         
