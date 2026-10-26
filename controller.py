@@ -12,11 +12,11 @@ class controller:
     
     
     # Default gains of the controller for linear and angular motions
-    def __init__(self, klp=0.2, klv=0.2, kli=0.2, kap=0.2, kav=0.2, kai=0.2):
+    def __init__(self, controller_type=P, klp=0.2, klv=0.2, kli=0.2, kap=0.2, kav=0.2, kai=0.2):
         
         # TODO Part 5 and 6: Modify the below lines to test your PD, PI, and PID controller
-        self.PID_linear=PID_ctrl(PID, klp, klv, kli, filename_="linear.csv")
-        self.PID_angular=PID_ctrl(PID, kap, kav, kai, filename_="angular.csv")
+        self.PID_linear=PID_ctrl(controller_type, klp, klv, kli, filename_="linear.csv")
+        self.PID_angular=PID_ctrl(controller_type, kap, kav, kai, filename_="angular.csv")
         self.max_linear_vel = 0.22  # m/s
         self.max_angular_vel = 2.84  # rad/s
         self.velocity_logger = Logger("velocities.csv", headers=[
@@ -48,9 +48,9 @@ class controller:
 
 class trajectoryController(controller):
 
-    def __init__(self, klp=0.2, klv=0.2, kli=0.2, kap=0.2, kav=0.2, kai=0.2):
+    def __init__(self, controller_type=PID, klp=0.2, klv=0.2, kli=0.2, kap=0.2, kav=0.2, kai=0.2):
         
-        super().__init__(klp, klv, kli, kap, kav, kai)
+        super().__init__(controller_type, klp, klv, kli, kap, kav, kai)
     
     def vel_request(self, pose, listGoals, status):
         

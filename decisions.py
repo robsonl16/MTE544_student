@@ -22,6 +22,7 @@ from controller import controller, trajectoryController
 # You may add any other imports you may need/want to use below
 # import ...
 
+P=0; PD=1; PI=2; PID=3
 
 class decision_maker(Node):
     
@@ -40,11 +41,11 @@ class decision_maker(Node):
         # TODO Part 5: Tune your parameters here
     
         if motion_type == POINT_PLANNER:
-            self.controller=controller(klp=0.2, klv=0.5, kap=0.8, kav=0.6)
+            self.controller=controller(PID, klp=0.1, klv=0.15, kli=0.15, kap=0.5, kav=0.15, kai=0.05)
             self.planner=planner(POINT_PLANNER)    
     
         elif motion_type==TRAJECTORY_PLANNER:
-            self.controller=trajectoryController(klp=0.2, klv=0.5, kap=0.8, kav=0.6)
+            self.controller=trajectoryController(PID, klp=0.025, klv=0.15, kli=0.15, kap=0.5, kav=0.125, kai=0.05)
             self.planner=planner(TRAJECTORY_PLANNER)
 
         else:
@@ -128,9 +129,9 @@ def main(args=None):
 
     # Part 4: instantiate the decision_maker with the proper parameters for moving the robot
     if args.motion.lower() == "point":
-        DM=decision_maker(goalPoint=[1.0, 1.0], publisher_msg=Twist, publishing_topic='cmd_vel', qos_publisher=odom_qos, rate=10, motion_type=POINT_PLANNER)
+        DM=decision_maker(goalPoint=[1.0, -1.0], publisher_msg=Twist, publishing_topic='cmd_vel', qos_publisher=odom_qos, rate=10, motion_type=POINT_PLANNER)
     elif args.motion.lower() == "trajectory":
-        DM=decision_maker(goalPoint=[1.0, 1.0], publisher_msg=Twist, publishing_topic='cmd_vel', qos_publisher=odom_qos, rate=10, motion_type=TRAJECTORY_PLANNER)
+        DM=decision_maker(goalPoint=[1.0, -1.0], publisher_msg=Twist, publishing_topic='cmd_vel', qos_publisher=odom_qos, rate=10, motion_type=TRAJECTORY_PLANNER)
     else:
         print("invalid motion type", file=sys.stderr)        
     

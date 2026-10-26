@@ -1,0 +1,2 @@
+self.controller=controller(PID, klp=0.5, klv=0.2, kli = 0.1, kap=0.5, kav=0.2, kai=0.1)
+point [1,0]

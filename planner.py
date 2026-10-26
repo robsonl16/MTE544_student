@@ -16,7 +16,7 @@ class planner:
             return self.point_planner(goalPoint)
         
         elif self.type==TRAJECTORY_PLANNER:
-            return self.trajectory_planner(1)
+            return self.trajectory_planner(0)
 
 
     def point_planner(self, goalPoint):

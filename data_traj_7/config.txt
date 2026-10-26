@@ -1,0 +1,3 @@
+            self.controller=trajectoryController(PID, klp=0.025, klv=0.15, kli=0.15, kap=1.0, kav=0.125, kai=0.05)
+parabola
+didnt work properly cause robot being bummy. switched robot in next data collection
