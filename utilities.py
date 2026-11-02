@@ -3,10 +3,13 @@ from math import atan2, asin, sqrt
 M_PI=3.1415926535
 
 class Logger:
-    
+    """Minimal CSV logger: writes the header on creation, then appends one row per log_values() call."""
+
     def __init__(self, filename, headers=["e", "e_dot", "e_int", "stamp"]):
-        
+
         self.filename = filename
+
+        # Create/overwrite the file and write the comma-separated header row
 
         with open(self.filename, 'w') as file:
             
@@ -22,6 +25,7 @@ class Logger:
 
 
     def log_values(self, values_list):
+        # Append one row; the file is reopened each time so data is saved even if the node is killed
 
         with open(self.filename, 'a') as file:
             
@@ -36,9 +40,11 @@ class Logger:
             
 
     def save_log(self):
+        # Nothing to do: log_values() already writes every row to disk
         pass
 
 class FileReader:
+    """Reads a Logger CSV back into (headers, rows of floats); used by plot_errors.py."""
     def __init__(self, filename):
         
         self.filename = filename
@@ -85,8 +91,8 @@ class FileReader:
 
 def euler_from_quaternion(quat):
     """
-    Convert quaternion (w in last place) to euler roll, pitch, yaw.
-    quat = [x, y, z, w]
+    Convert quaternion (w in last place) to yaw only (planar robot, roll/pitch not needed).
+    quat = [x, y, z, w]; returns yaw in [-pi, pi].
     """
 
     # just unpack yaw
@@ -97,21 +103,18 @@ def euler_from_quaternion(quat):
 
 # Part 4: Implement the calculation of the linear error
 def calculate_linear_error(current_pose, goal_pose):
-        
-    # Compute the linear error in x and y
-    # Remember that current_pose = [x,y, theta, time stamp] and goal_pose = [x,y]
-    # Remember to use the Euclidean distance to calculate the error.
+    # Linear error = Euclidean distance from robot to goal (always >= 0).
+    # current_pose = [x, y, theta, stamp], goal_pose = [x, y]
     error_linear= sqrt((goal_pose[0]-current_pose[0])**2 + (goal_pose[1]-current_pose[1])**2)
 
     return error_linear
 
 # Part 4: Implement the calculation of the angular error
 def calculate_angular_error(current_pose, goal_pose):
+    # Angular error = (bearing from robot to goal) - (robot heading), wrapped to [-pi, pi].
+    # Positive = goal is to the robot's left (turn CCW). current_pose = [x, y, theta, stamp]
 
-    # Compute the linear error in x and y
-    # Remember that current_pose = [x,y, theta, time stamp] and goal_pose = [x,y]
-    # Use atan2 to find the desired orientation
-    # Remember that this function returns the difference in orientation between where the robot currently faces and where it should face to reach the goal
+    # Desired heading: direction of the vector robot -> goal
     desired_theta = atan2(
         goal_pose[1] - current_pose[1],
         goal_pose[0] - current_pose[0],
@@ -120,7 +123,7 @@ def calculate_angular_error(current_pose, goal_pose):
 
     error_angular = desired_theta - current_theta
 
-    # Remember to handle the cases where the angular error might exceed the range [-π, π]
+    # Wrap to [-pi, pi] so the robot always turns the short way
     while error_angular > M_PI:
         error_angular -= 2 * M_PI
 

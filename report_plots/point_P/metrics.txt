@@ -1,0 +1,22 @@
+linear: clipped 0/266 (0.0%); peak |request| 0.1414 m/s
+angular: clipped 0/266 (0.0%); peak |request| 0.3142 rad/s
+point_P: start (0.000, 0.000)  end (0.996, -0.994) theta_end -0.933 rad  duration 26.16 s
+
+run             ctrl         e_peak   e_final      OS_%      Tp_s      zeta        wn   Ts_meas   Ts_pred       IAE
+point_P         linear        1.414     0.030     0.000       nan       nan       nan    24.465       nan    13.442
+point_P         angular      -0.785     0.011     2.628    25.665     0.757     0.187       nan    28.211     2.130
+
+path = signed perpendicular distance [m] from the planned --ref trajectory (+ left, - right)
+OS/Tp/Ts measured from the error peak; settling band max(2% of step, 0.01); e_final = mean of last 5% of samples; nan = n/a or never settled
+
+
+REPORT TABLE - point controller (all metrics measured against the setpoint e = 0)
+                    |------------------ Agility ------------------|-------- Accuracy --------| Overshoot 
+run       error     |rise10-90      t90   Ts(5%)   Ts(2%)    t_end|      e_final          IAE|       %OS 
+--------------------------------------------------------------------------------------------------------
+point_P   linear    |   20.00s   21.67s   24.06s   25.46s   25.91s|    +0.0126 m       13.442|     0.00% 
+point_P   angular   |    4.91s    5.57s    7.26s   25.76s   25.91s|  -0.0112 rad        2.130|     2.63% 
+point_P   position  |                                             |         closest +0.0076 m|     0.00% 
+Ts: nan = |e| never stayed inside the band before the run stopped.  IAE units: m*s (linear), rad*s (angular).
+position: error projected on the start->goal line; closest > 0 = stopped short of the goal, < 0 = drove past it.
+

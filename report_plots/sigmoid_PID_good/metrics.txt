@@ -1,0 +1,12 @@
+linear: clipped 0/464 (0.0%); peak |request| 0.1343 m/s
+angular: clipped 0/464 (0.0%); peak |request| 0.7855 rad/s
+sigmoid_PID_good: start (0.000, -0.000)  end (2.324, 0.981) theta_end 0.029 rad  duration 46.00 s
+
+run             ctrl         e_peak   e_final      OS_%      Tp_s      zeta        wn   Ts_meas   Ts_pred       IAE
+sigmoid_PID_goodlinear        2.688     0.212     0.000       nan       nan       nan    43.102       nan    50.237
+sigmoid_PID_goodangular       0.782    -0.001    23.928     2.252     0.414     1.533    23.742     6.299     1.537
+sigmoid_PID_goodpath         -0.038     0.000    18.397     2.781     0.474     1.283     1.195     6.570     0.092
+
+path = signed perpendicular distance [m] from the planned --ref trajectory (+ left, - right)
+OS/Tp/Ts measured from the error peak; settling band max(2% of step, 0.01); e_final = mean of last 5% of samples; nan = n/a or never settled
+

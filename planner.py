@@ -4,12 +4,15 @@ POINT_PLANNER=0; TRAJECTORY_PLANNER=1
 
 
 class planner:
+    """Generates the target: a single [x, y] goal (point planner) or a list of waypoints (trajectory planner)."""
     def __init__(self, type_):
 
         self.type=type_
         self.goal_point=None
-    
+
     def plan(self, goalPoint=[-2.0, -2.0]):
+        # Point mode returns goalPoint; trajectory mode returns the waypoint list
+        # (argument 0 = parabola, 1 = sigmoid; change it to select the trajectory to run)
         self.goal_point=goalPoint
 
         if self.type==POINT_PLANNER:
@@ -20,23 +23,23 @@ class planner:
 
 
     def point_planner(self, goalPoint):
+        # Single fixed goal (x, y) in the odometry frame
         x = goalPoint[0]
         y = goalPoint[1]
         return x, y
 
     # Part 6: Implemented sigmoid and parabola trajectories
     def trajectory_planner(self, trajectory_type=0, ):
+        # Both trajectories: 50 evenly spaced x samples, y from the curve, returned as [[x, y], ...]
         if trajectory_type == 0:
-            # Part 6: Implement parabola
-            # goal_x = np.clip(self.goal_point[0], 0.0, 1.5)
+            # Part 6: parabola y = x^2 for x in [0, 1.5]
             x = np.linspace(0.0, 1.5, 50)
             y = x**2
             points = np.column_stack((x,y)).tolist()
             
             pass
         elif trajectory_type == 1:
-            # Part 6: Implement sigmoid
-            # goal_x = np.clip(self.goal_point[0], 0.0, 2.5)
+            # Part 6: sigmoid y = 2/(1 + e^(-2x)) - 1 for x in [0, 2.5]
             x = np.linspace(0.0, 2.5, 50)
             y = 2 / (1+np.exp(-2*x)) - 1
             points = np.column_stack((x,y)).tolist()

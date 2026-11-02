@@ -25,7 +25,12 @@ from controller import controller, trajectoryController
 P=0; PD=1; PI=2; PID=3
 
 class decision_maker(Node):
-    
+    """
+    Top-level ROS 2 node. At a fixed rate it reads the pose from the localizer, checks whether
+    the goal is reached, asks the controller for (v, w) and publishes them on cmd_vel.
+    Wires together the planner (where to go), localization (where we are) and controller.
+    """
+
     def __init__(self, goalPoint, publisher_msg=Twist, publishing_topic='cmd_vel', qos_publisher=10, rate=10, motion_type=POINT_PLANNER):
 
         super().__init__("decision_maker")
@@ -37,9 +42,9 @@ class decision_maker(Node):
 
         publishing_period=1/rate
         
-        # Instantiate the controller
-        # TODO Part 5: Tune your parameters here
-    
+        # Instantiate the controller and planner for the chosen motion
+        # Part 5: tuned gains (kl* = linear, ka* = angular; p, v = derivative, i)
+
         if motion_type == POINT_PLANNER:
             self.controller=controller(PID, klp=0.1, klv=0.15, kli=0.15, kap=0.5, kav=0.15, kai=0.05)
             self.planner=planner(POINT_PLANNER)    
@@ -59,12 +64,14 @@ class decision_maker(Node):
         # NOTE: goalPoint is used only for the pointPlanner
         self.goal=self.planner.plan(goalPoint)
 
+        # Run the control loop every publishing_period seconds (rate Hz)
         self.create_timer(publishing_period, self.timerCallback)
         print('Decision maker node is initialized')
 
 
     def timerCallback(self):
-        
+        # One control step: update pose -> check goal -> compute and publish velocities
+
         # Part 3: Run the localization node
         spin_once(self.localizer, timeout_sec=0)
         # Remember that this file is already running the decision_maker node.
@@ -81,20 +88,20 @@ class decision_maker(Node):
 
         vel_msg=Twist()
         
-        # TODO Part 3: Check if you reached the goal
+        # Part 3: Check if you reached the goal
         if type(self.goal) == list:
-            # if goal is a list, we are following a trajectory of points, determine if we reached last point
+            # Trajectory mode: done once the look-ahead point is the last waypoint
             reached_goal=self.controller.lookFarFor(current_pose, self.goal) == self.goal[-1]
 
-        else: 
-            # else, point_planner mode, no list of points
-            # considered goal reached if less than 1cm and 2.5deg error
+        else:
+            # Point mode: done when within 1 cm of the goal and ang_error < 0.04 rad (~2.3 deg)
             lin_error = calculate_linear_error(current_pose, self.goal)
             ang_error = calculate_angular_error(current_pose, self.goal)
             reached_goal = (lin_error < 0.01) and (ang_error < 0.04)
         
 
         if reached_goal:
+            # Publish a zero Twist to stop the robot, then shut down the node
             print("reached goal")
             self.publisher.publish(vel_msg)
             
@@ -106,6 +113,7 @@ class decision_maker(Node):
             shutdown()
             return
         
+        # Controller computes saturated linear (m/s) and angular (rad/s) velocity from the current pose
         velocity, yaw_rate = self.controller.vel_request(self.localizer.getPose(), self.goal, True)
 
         # Part 4: Publish the velocity to move the robot
@@ -118,12 +126,11 @@ import argparse
 
 
 def main(args=None):
-    
+    # Entry point: start ROS 2, build the decision maker for --motion point|trajectory, spin until goal reached
+
     init()
 
-    # TODO Part 3: You might need to change the QoS profile based on whether you're using the real robot or in simulation.
-    # Remember to define your QoS profile based on the information available in "ros2 topic info /odom --verbose" as explained in Tutorial 3
-    
+    # Part 3: QoS profile (reliability=2 BEST_EFFORT, durability=2 VOLATILE, history=1 KEEP_LAST, depth 10)
     odom_qos=QoSProfile(reliability=2, durability=2, history=1, depth=10)
     # odom_qos=QoSProfile(history=HistoryPolicy.KEEP_LAST, depth=10, reliability=ReliabilityPolicy.BEST_EFFORT, durability=DurabilityPolicy.VOLATILE)
 
@@ -137,6 +144,7 @@ def main(args=None):
     
     
     
+    # Spin until timerCallback calls shutdown() on reaching the goal
     try:
         spin(DM)
     except SystemExit:

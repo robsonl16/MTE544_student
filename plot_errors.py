@@ -3,7 +3,11 @@ from utilities import FileReader
 
 
 def plot_errors(filename):
-    
+    """
+    Quick-look plot of one Logger CSV (provided template script; report figures use plot_pid.py).
+    Left: column 0 vs column 1 (e vs e_dot, or x vs y for robot_pose.csv). Right: every column vs time.
+    """
+
     headers, values=FileReader(filename).read_file()
     
     time_list=[]

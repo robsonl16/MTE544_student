@@ -1,20 +1,22 @@
 """
-Report plots for P / PID runs. For each run directory this makes four figures:
-    {e-t, edot-t}, {x-t, y-t, th-t}, {x-y} and {e-edot}
-(linear and angular errors), and prints step-response metrics for tuning.
-Also plots requested/limited velocities automatically when velocities.csv exists.
+Report plots and metrics for P / PID runs. For each run directory this makes:
+    <label>_errors.png       {e-t, edot-t}      linear and angular error and error rate
+    <label>_phase.png        {e-edot}           phase portrait, one panel per loop
+    <label>_states_path.png  {x-t, y-t, th-t} and {x-y} side by side
+    <label>_velocities.png   requested vs saturated velocity (if velocities.csv exists)
+and prints two tables:
+    - step-response metrics per run (overshoot, zeta, wn, settling, IAE; used for tuning)
+    - REPORT TABLE (point runs only): agility / accuracy / overshoot vs the setpoint e = 0
 
 Each run directory must contain linear.csv and angular.csv as written by
 utilities.Logger (columns: e, e_dot, e_int, stamp[ns]), and optionally
 robot_pose.csv (columns: x, y, theta, stamp[ns]).
 
 Examples:
-    python3 plot_pid.py                                  # plots ./data
-    python3 plot_pid.py --runs data_P data_PID --labels P PID --goal 1 1
-    python3 plot_pid.py --runs data_P --labels P --save figures   # figures/P_errors.png, ...
-    python3 plot_pid.py --runs data_sigmoid --ref sigmoid          # adds path-tracking overshoot
-    python3 plot_pid.py --ref parabola                   # overlay the planned trajectory
-    python3 plot_pid.py --goal -2 -2                     # overlay a point-planner goal
+    python3 plot_pid.py --runs data_P_1 data_PID_6 --labels P PID --goal 1 -1 --no-show   # report table only
+    python3 plot_pid.py --runs data_P_1 --labels P --goal 1 -1 --save figures            # save PNGs
+    python3 plot_pid.py --runs data_traj_6 --ref sigmoid      # overlay planned sigmoid + path overshoot
+    python3 plot_pid.py --runs data_traj_8 --ref parabola     # overlay planned parabola
 """
 
 import argparse
@@ -56,6 +58,7 @@ def load_log(path):
 
 
 def reference_path(ref):
+    """Planned waypoints (N x 2 array) for 'parabola' or 'sigmoid', taken from planner.py."""
     return np.array(planner(TRAJECTORY_PLANNER).trajectory_planner(REF_TRAJECTORIES[ref]))
 
 
@@ -86,7 +89,7 @@ def step_metrics(t, e):
 
     The "step" starts where the error is largest (|e - e_ss| max): t=0 for a
     point goal, or later when a trajectory's look-ahead heading jumps.
-        %OS = 100 * |e_max past e_ss| / |e_peak - e_ss|
+        %OS = 100 * |e_max past 0 (setpoint)| / |e_peak|
         zeta = -ln(%OS/100) / sqrt(pi^2 + ln^2(%OS/100))
         wn   = pi / (Tp * sqrt(1 - zeta^2))
         Ts   = 4 / (zeta * wn)                        (2% criterion)
@@ -100,12 +103,13 @@ def step_metrics(t, e):
     k0 = np.argmax(np.abs(e - e_ss))
     step = e[k0] - e_ss
 
-    # overshoot: furthest the error crosses past e_ss after the step
-    past = -np.sign(step) * (e[k0:] - e_ss)
+    # overshoot: furthest the error crosses past the SETPOINT (e = 0) after the step.
+    # Measured against 0, not e_ss: the run stops once inside the goal tolerance,
+    # so the last samples are not a steady state and averaging them would absorb
+    # (cancel) the overshoot itself.
+    past = -np.sign(e[k0]) * e[k0:]
     k_os = k0 + np.argmax(past)
-    os_frac = max(0.0, past.max()) / abs(step) if step != 0 else 0.0
-    if k_os >= len(e) - n_final:
-        os_frac = 0.0   # "overshoot" inside the averaging window is just a still-moving tail
+    os_frac = max(0.0, past.max()) / abs(e[k0]) if e[k0] != 0 else 0.0
 
     if os_frac > 0:
         tp = t[k_os] - t[k0]
@@ -139,7 +143,82 @@ def step_metrics(t, e):
     }
 
 
+def report_metrics(t, e):
+    """
+    Point-controller metrics for the report table (rubric: agility, accuracy, overshoot).
+    The error should go from e[0] to the setpoint 0, so everything is measured against 0:
+      normalised response r(t) = 1 - e(t)/e(0)   (0 at start, 1 at the setpoint)
+      Agility  : rise time  = t(r >= 0.9) - t(r >= 0.1)          (10-90% rise time)
+                 t90        = t(r >= 0.9)
+                 Ts5 / Ts2  = first time after which |e| stays within 5% / 2% of |e(0)|
+                              (standard settling-time criteria; nan = never settled
+                               before the run stopped)
+      Accuracy : e_final    = last logged error (where the robot stopped; approximates
+                              steady-state error, since the run ends at the goal tolerance)
+                 IAE        = integral of |e| dt  (integral performance index)
+      Overshoot: %OS        = 100 * (furthest e goes past 0) / |e(0)|
+    """
+    e0 = e[0]
+    nan = float("nan")
+    if e0 == 0:
+        return dict(rise=nan, t90=nan, Ts5=nan, Ts2=nan, t_end=t[-1], e_final=e[-1], IAE=nan, OS=nan)
+    r = 1 - e / e0
+
+    def first_reach(level):
+        idx = np.where(r >= level)[0]
+        return t[idx[0]] if len(idx) else nan
+
+    def settle(frac):
+        outside = np.where(np.abs(e) > frac * abs(e0))[0]
+        if len(outside) == 0:
+            return 0.0
+        if outside[-1] == len(e) - 1:
+            return nan
+        return t[outside[-1] + 1]
+
+    t10, t90 = first_reach(0.1), first_reach(0.9)
+    past = -np.sign(e0) * e
+    dt = np.diff(t, prepend=t[0])
+    return dict(rise=t90 - t10, t90=t90, Ts5=settle(0.05), Ts2=settle(0.02), t_end=t[-1],
+                e_final=e[-1], IAE=np.sum(np.abs(e) * dt), OS=100 * max(0.0, past.max()) / abs(e0))
+
+
+def position_overshoot(x, y, goal):
+    """
+    The linear error is a Euclidean distance (always >= 0), so it cannot show overshoot
+    by changing sign. Instead project (goal - pose) onto the start->goal direction:
+    positive = still short of the goal, negative = drove past it.
+    Returns (%OS of the start->goal distance, closest signed approach [m]).
+    """
+    start, g = np.array([x[0], y[0]]), np.array(goal, dtype=float)
+    d0 = np.linalg.norm(g - start)
+    along = (g[0] - x) * (g - start)[0] / d0 + (g[1] - y) * (g - start)[1] / d0
+    return 100 * max(0.0, -along.min()) / d0, along.min()
+
+
+def print_report_table(rows, pos_rows):
+    """rows: (label, ctrl, report_metrics dict); pos_rows: (label, %OS, closest approach)."""
+    def sec(v):
+        return f"{'nan':>9}" if np.isnan(v) else f"{v:>8.2f}s"
+
+    print("\nREPORT TABLE - point controller (all metrics measured against the setpoint e = 0)")
+    print(f"{'':<10}{'':<10}|{' Agility ':-^45}|{' Accuracy ':-^26}|{' Overshoot ':-^11}")
+    print(f"{'run':<10}{'error':<10}|{'rise10-90':>9}{'t90':>9}{'Ts(5%)':>9}{'Ts(2%)':>9}{'t_end':>9}"
+          f"|{'e_final':>13}{'IAE':>13}|{'%OS':>10} ")
+    print("-" * 104)
+    for label, ctrl, m in rows:
+        e_final = f"{m['e_final']:+.4f} {UNITS[ctrl]}"
+        print(f"{label:<10}{ctrl:<10}|{sec(m['rise'])}{sec(m['t90'])}{sec(m['Ts5'])}{sec(m['Ts2'])}{sec(m['t_end'])}"
+              f"|{e_final:>13}{m['IAE']:>13.3f}|{m['OS']:>9.2f}% ")
+    for label, os_pct, closest in pos_rows:
+        closest_txt = f"closest {closest:+.4f} m"
+        print(f"{label:<10}{'position':<10}|{'':45}|{closest_txt:>26}|{os_pct:>9.2f}% ")
+    print("Ts: nan = |e| never stayed inside the band before the run stopped.  IAE units: m*s (linear), rad*s (angular).")
+    print("position: error projected on the start->goal line; closest > 0 = stopped short of the goal, < 0 = drove past it.\n")
+
+
 def print_metrics(results):
+    """Print the step_metrics() table (one row per run and loop)."""
     cols = ["e_peak", "e_final", "OS_%", "Tp_s", "zeta", "wn", "Ts_meas", "Ts_pred", "IAE"]
     print(f"\n{'run':<16}{'ctrl':<9}" + "".join(f"{c:>10}" for c in cols))
     for label, ctrl, m in results:
@@ -157,6 +236,7 @@ def style(name, n):
 
 
 def finish(ax, title, xlabel, ylabel):
+    """Apply the rubric formatting to an axes: title, axis labels, zero line, grid, legend."""
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -166,6 +246,7 @@ def finish(ax, title, xlabel, ylabel):
 
 
 def save_fig(fig, save_dir, label, name):
+    """Save fig as <save_dir>/<label>_<name>.png (no-op when --save is not given)."""
     if save_dir:
         os.makedirs(save_dir, exist_ok=True)
         path = os.path.join(save_dir, f"{label}_{name}.png")
@@ -174,6 +255,7 @@ def save_fig(fig, save_dir, label, name):
 
 
 def plot_velocities(filename, label, save_dir=None):
+    """Plot requested vs commanded (clipped) linear/angular velocity and mark samples hit by saturation."""
     with open(filename, newline="") as stream:
         rows = [{key.strip(): value.strip() for key, value in row.items()
                  if key and key.strip()} for row in csv.DictReader(stream, skipinitialspace=True)]
@@ -211,7 +293,7 @@ def plot_velocities(filename, label, save_dir=None):
 
 
 def plot_run(run_dir, label, ref=None, goal=None, save_dir=None):
-    """Report figures plus velocity saturation when a velocity log is present."""
+    """All figures for one run: velocities, {e-t, edot-t}, {e-edot}, and {states-t | x-y}."""
     velocity_path = os.path.join(run_dir, "velocities.csv")
     if os.path.isfile(velocity_path):
         plot_velocities(velocity_path, label, save_dir)
@@ -257,16 +339,21 @@ def plot_run(run_dir, label, ref=None, goal=None, save_dir=None):
     print(f"{label}: start ({x[0]:.3f}, {y[0]:.3f})  end ({x[-1]:.3f}, {y[-1]:.3f}) "
           f"theta_end {theta[-1]:.3f} rad  duration {t[-1]:.2f} s")
 
-    # {x-t, y-t, th-t}
-    fig, axes = plt.subplots(3, 1, figsize=(10, 9), constrained_layout=True)
-    fig.suptitle(f"{label}: robot states vs time")
-    for ax, (name, v, unit) in zip(axes, [("x", x, "m"), ("y", y, "m"), ("theta", theta, "rad")]):
-        ax.plot(t, v, label=f"{name} [{unit}]", **style(name, len(t)))
-        finish(ax, f"{name} vs time", "time [s]", f"{name} [{unit}]")
-    save_fig(fig, save_dir, label, "states")
+    # One figure, two panels: {x-t, y-t, th-t} on the left, {x-y} on the right
+    fig, (ax, ax_xy) = plt.subplots(1, 2, figsize=(16, 6.5), constrained_layout=True,
+                                    gridspec_kw={"width_ratios": [1.25, 1]})
+    fig.suptitle(f"{label}: robot states vs time and path")
 
-    # {x-y}
-    fig, ax = plt.subplots(figsize=(8, 7), constrained_layout=True)
+    # left: all three states on one axes (x, y in m and theta in rad share a similar range)
+    for name, v, unit in [("x", x, "m"), ("y", y, "m"), ("theta", theta, "rad")]:
+        ax.plot(t, v, label=f"{name} [{unit}]", **style(name, len(t)))
+    if goal is not None:
+        for name, g in (("x", goal[0]), ("y", goal[1])):
+            ax.axhline(g, color=SERIES_STYLE[name][0], linestyle=":", linewidth=1.2, label=f"goal {name} = {g:g} m")
+    finish(ax, "robot states vs time", "time [s]", "x, y [m]  /  θ [rad]")
+
+    # right: x-y path
+    ax = ax_xy
     if ref is not None:
         points = reference_path(ref)
         ax.plot(points[:, 0], points[:, 1], "--", color="0.5", linewidth=1.5, label=f"planned {ref}")
@@ -277,11 +364,12 @@ def plot_run(run_dir, label, ref=None, goal=None, save_dir=None):
     ax.plot(x[0], y[0], "o", color=st["color"], markersize=9, label="start")
     ax.plot(x[-1], y[-1], "X", color=st["color"], markersize=10, label="end")
     ax.set_aspect("equal", adjustable="datalim")
-    finish(ax, f"{label}: robot path x vs y", "x [m]", "y [m]")
-    save_fig(fig, save_dir, label, "path")
+    finish(ax, "robot path x vs y", "x [m]", "y [m]")
+    save_fig(fig, save_dir, label, "states_path")
 
 
 if __name__ == "__main__":
+    # Parse args, compute metrics for every run, draw/save figures, print both tables
     parser = argparse.ArgumentParser(description="Plot linear/angular PID error logs and robot motion.")
     parser.add_argument("--runs", nargs="+", default=["data"],
                         help="directories containing linear.csv, angular.csv, robot_pose.csv (default: data)")
@@ -289,23 +377,32 @@ if __name__ == "__main__":
     parser.add_argument("--save", metavar="DIR", help="save every figure as DIR/<label>_<figure>.png")
     parser.add_argument("--ref", choices=REF_TRAJECTORIES, help="overlay the planned trajectory from planner.py")
     parser.add_argument("--goal", nargs=2, type=float, metavar=("X", "Y"), help="overlay a point-planner goal")
+    parser.add_argument("--no-show", action="store_true", help="only print the tables, do not open figure windows")
     args = parser.parse_args()
 
     labels = args.labels or [os.path.basename(os.path.normpath(r)) for r in args.runs]
     if len(labels) != len(args.runs):
         parser.error("--labels must have one entry per --runs directory")
 
-    results = []
+    results, report_rows, pos_rows = [], [], []
     for run_dir, label in zip(args.runs, labels):
         for ctrl in CONTROLLERS:
             path = os.path.join(run_dir, f"{ctrl}.csv")
             if os.path.isfile(path):
                 t, e, _, _ = load_log(path)
                 results.append((label, ctrl, step_metrics(t, e)))
+                report_rows.append((label, ctrl, report_metrics(t, e)))
         pose_path = os.path.join(run_dir, "robot_pose.csv")
         if args.ref and os.path.isfile(pose_path):
             t, x, y, _ = load_log(pose_path)
             results.append((label, "path", step_metrics(t, path_error(x, y, reference_path(args.ref)))))
-        plot_run(run_dir, label, args.ref, args.goal, args.save)
+        if args.goal and os.path.isfile(pose_path):
+            _, x, y, _ = load_log(pose_path)
+            pos_rows.append((label, *position_overshoot(x, y, args.goal)))
+        if not args.no_show or args.save:
+            plot_run(run_dir, label, args.ref, args.goal, args.save)
     print_metrics(results)
-    plt.show()
+    if not args.ref:   # rubric: agility/accuracy/overshoot table is for the point controller only
+        print_report_table(report_rows, pos_rows)
+    if not args.no_show:
+        plt.show()

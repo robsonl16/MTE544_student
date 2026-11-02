@@ -1,0 +1,12 @@
+linear: clipped 0/428 (0.0%); peak |request| 0.1519 m/s
+angular: clipped 0/428 (0.0%); peak |request| 0.3435 rad/s
+parabola_PID: start (0.000, 0.000)  end (1.395, 1.940) theta_end 1.236 rad  duration 42.50 s
+
+run             ctrl         e_peak   e_final      OS_%      Tp_s      zeta        wn   Ts_meas   Ts_pred       IAE
+parabola_PID    linear        2.704     0.357     0.000       nan       nan       nan    39.666       nan    51.730
+parabola_PID    angular       0.613     0.006     7.928     4.608     0.628     0.876    16.113     7.271     2.670
+parabola_PID    path         -0.052    -0.002     4.877     5.104     0.693     0.854     2.912     6.759     0.273
+
+path = signed perpendicular distance [m] from the planned --ref trajectory (+ left, - right)
+OS/Tp/Ts measured from the error peak; settling band max(2% of step, 0.01); e_final = mean of last 5% of samples; nan = n/a or never settled
+
