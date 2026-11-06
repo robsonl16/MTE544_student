@@ -26,17 +26,14 @@ class kalman_filter:
         
         self.P= np.dot( np.dot(self.A, self.P), self.A.T) + self.Q
 
-    # TODO Part 3: Replace the matrices with Jacobians where needed
+    # TODO Part 3: Calculate the Kalman gain and correct your estimates
     def update(self, z):
-
-        S=np.dot(np.dot(self.C, self.P), self.C.T) + self.R
-            
-        kalman_gain=np.dot(np.dot(self.P, self.C.T), np.linalg.inv(S))
         
-        surprise_error= z - self.measurement_model()
+        kalman_gain= ...
         
-        self.x=self.x + np.dot(kalman_gain, surprise_error)
-        self.P=np.dot( (np.eye(self.A.shape[0]) - np.dot(kalman_gain, self.C)) , self.P)
+        self.x= ...
+        
+        self.P= ...
         
     
     # TODO Part 3: Implement here the measurement model
