@@ -3,32 +3,37 @@ import numpy as np
 
 # TODO Part 3: Comment the code explaining each part
 class kalman_filter:
-    # TODO Part 3: Initialize the covariances and the states
+    # Part 3: Initialize the covariances and the states
     # Do this in lab by looking at covariance of the sensors and the states
     def __init__(self, P, Q, R, x, dt):
 
-        self.P = P
-        self.Q = Q
-        self.R = R
-        self.x = x
+        self.P = P  # State covariance matrix
+        self.Q = Q  # Process noise covariance matrix
+        self.R = R  # Measurement model covariance matrix
+        self.x = x  # States
         self.dt = dt
 
-    # TODO Part 3: Replace the matrices with Jacobians where needed
+    # Part 3: Replace the matrices with Jacobians where needed
     def predict(self):
         """
-        need to run the motion model to get new state, 
-        then after that calculate the jacobian of the motion model 
+        need to run the motion model to get new state,
+        then after that calculate the jacobian of the motion model
         to get A, then update P
         """
-        self.A = self.jacobian_A() #calculate jacobian for motion model
-        self.motion_model() #run the motion model for one step
-        self.C = self.jacobian_H() #calculate jacobian for measurement model
+        self.A = self.jacobian_A()  # calculate jacobian for motion model
+        self.motion_model()  # run the motion model for one step
+        self.C = self.jacobian_H()  # calculate jacobian for measurement model
 
         self.P = np.dot(np.dot(self.A, self.P), self.A.T) + self.Q
 
-    # TODO Part 3: Calculate the Kalman gain and correct your estimates
+    # Part 3: Calculate the Kalman gain and correct your estimates
     def update(self, z):
-        #predicted measurement and how far it was
+        """
+        update step involving calculating the Kalman gain
+        then updating the state
+        then updating the covariance matrix
+        """
+        # predicted measurement and how far it was
         innovation = z - self.measurement_model()
 
         # innovation covariance: predicted uncertainty in measurement + sensor noise
@@ -39,7 +44,7 @@ class kalman_filter:
         self.x = self.x + kalman_gain @ innovation
 
         # reduce uncertainty to account for measurement
-        self.P = (np.eye(len(self.x)) - kalman_gain @ self.C) @ self.P
+        self.P = np.array(np.eye(len(self.x)) - kalman_gain @ self.C) @ self.P
 
     # Part 3: Implement here the measurement model
     def measurement_model(self):
@@ -55,7 +60,9 @@ class kalman_filter:
 
     # Part 3: Impelment the motion model (state-transition matrice)
     def motion_model(self):
-
+        """
+        How the 2wd robot moves between timesteps, given a current state and time step
+        """
         x, y, th, w, v, vdot = self.x
         dt = self.dt
 
@@ -87,12 +94,12 @@ class kalman_filter:
         return np.array(
             [
                 # x, y,  th,                      w,    v,             vdot
-                [1, 0,  -v * np.sin(th) * dt,     0,    np.cos(th) * dt, 0],
-                [0, 1,   v * np.cos(th) * dt,     0,    np.sin(th) * dt, 0],
-                [0, 0,   1,                       dt,   0,               0],
-                [0, 0,   0,                       1,    0,               0],
-                [0, 0,   0,                       0,    1,              dt],
-                [0, 0,   0,                       0,    0,                1],
+                [1, 0, -v * np.sin(th) * dt, 0, np.cos(th) * dt, 0],
+                [0, 1, v * np.cos(th) * dt, 0, np.sin(th) * dt, 0],
+                [0, 0, 1, dt, 0, 0],
+                [0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 1, dt],
+                [0, 0, 0, 0, 0, 1],
             ]
         )
 
@@ -108,7 +115,7 @@ class kalman_filter:
         """
         return np.array(
             [
-                #x, y, th,w, v, vdot
+                # x, y, th,w, v, vdot
                 [0, 0, 0, 0, 1, 0],  # v
                 [0, 0, 0, 1, 0, 0],  # w
                 [0, 0, 0, 0, 0, 1],  # ax
