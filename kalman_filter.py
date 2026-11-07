@@ -32,19 +32,19 @@ class kalman_filter:
 
         self.P = ...
 
-    # TODO Part 3: Implement here the measurement model
+    # Part 3: Implement here the measurement model
     def measurement_model(self):
         x, y, th, w, v, vdot = self.x
         return np.array(
             [
-                ...,  # v
-                ...,  # w
-                ...,  # ax
-                ...,  # ay
+                v,  # v
+                w,  # w
+                vdot,  # ax
+                v * w,  # ay
             ]
         )
 
-    # TODO Part 3: Impelment the motion model (state-transition matrice)
+    # Part 3: Impelment the motion model (state-transition matrice)
     def motion_model(self):
 
         x, y, th, w, v, vdot = self.x
@@ -77,7 +77,7 @@ class kalman_filter:
             ]
         )
 
-    # TODO Part 3: Implement here the jacobian of the H matrix (measurements)
+    # Part 3: Implement here the jacobian of the H matrix (measurements)
     def jacobian_H(self):
         x, y, th, w, v, vdot = self.x
         # Acceleration in y can be calculated in robot frame as vw
