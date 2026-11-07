@@ -7,30 +7,39 @@ class kalman_filter:
     # Do this in lab by looking at covariance of the sensors and the states
     def __init__(self, P, Q, R, x, dt):
 
-        self.P = ...
-        self.Q = ...
-        self.R = ...
-        self.x = ...
-        self.dt = ...
+        self.P = P
+        self.Q = Q
+        self.R = R
+        self.x = x
+        self.dt = dt
 
     # TODO Part 3: Replace the matrices with Jacobians where needed
     def predict(self):
-
-        self.A = ...
-        self.C = ...
-
-        self.motion_model()
+        """
+        need to run the motion model to get new state, 
+        then after that calculate the jacobian of the motion model 
+        to get A, then update P
+        """
+        self.A = self.jacobian_A() #calculate jacobian for motion model
+        self.motion_model() #run the motion model for one step
+        self.C = self.jacobian_H() #calculate jacobian for measurement model
 
         self.P = np.dot(np.dot(self.A, self.P), self.A.T) + self.Q
 
     # TODO Part 3: Calculate the Kalman gain and correct your estimates
     def update(self, z):
+        #predicted measurement and how far it was
+        innovation = z - self.measurement_model()
 
-        kalman_gain = ...
+        # innovation covariance: predicted uncertainty in measurement + sensor noise
+        S = self.C @ self.P @ self.C.T + self.R
 
-        self.x = ...
+        kalman_gain = self.P @ self.C.T @ np.linalg.inv(S)
 
-        self.P = ...
+        self.x = self.x + kalman_gain @ innovation
+
+        # reduce uncertainty to account for measurement
+        self.P = (np.eye(len(self.x)) - kalman_gain @ self.C) @ self.P
 
     # Part 3: Implement here the measurement model
     def measurement_model(self):
@@ -62,28 +71,44 @@ class kalman_filter:
         )
 
     def jacobian_A(self):
+        """
+        Calculate the jacobian matrix of the motion model wrt to the state variables
+        The motion model is:
+        x_{k+1} = x_k + v_k * cos(th_k) * dt
+        y_{k+1} = y_k + v_k * sin(th_k) * dt
+        th_{k+1} = th_k + w_k * dt
+        w_{k+1} = w_k
+        v_{k+1} = v_k + vdot_k * dt
+        vdot_{k+1} = vdot_k
+        """
         x, y, th, w, v, vdot = self.x
         dt = self.dt
 
         return np.array(
             [
-                # x, y,               th, w,             v, vdot
-                [1, 0, -v * np.sin(th) * dt, 0, np.cos(th) * dt, 0],
-                [0, 1, v * np.cos(th) * dt, 0, np.sin(th) * dt, 0],
-                [0, 0, 1, dt, 0, 0],
-                [0, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 1, dt],
-                [0, 0, 0, 0, 0, 1],
+                # x, y,  th,                      w,    v,             vdot
+                [1, 0,  -v * np.sin(th) * dt,     0,    np.cos(th) * dt, 0],
+                [0, 1,   v * np.cos(th) * dt,     0,    np.sin(th) * dt, 0],
+                [0, 0,   1,                       dt,   0,               0],
+                [0, 0,   0,                       1,    0,               0],
+                [0, 0,   0,                       0,    1,              dt],
+                [0, 0,   0,                       0,    0,                1],
             ]
         )
 
     # Part 3: Implement here the jacobian of the H matrix (measurements)
     def jacobian_H(self):
         x, y, th, w, v, vdot = self.x
-        # Acceleration in y can be calculated in robot frame as vw
+        """
+        Calculate the jacobian matrix of the measurement model
+        measurment model: z = [v, w, ax, ay] where ax is linear acceleration in x 
+        and ay is linear acceleration in y, calculated with v*w
+        In the Jacobian below, each row is the partial derivative of the measurement model
+        wrt to each state variable (x, y, th, w, v, vdot)
+        """
         return np.array(
             [
-                # x, y,th, w, v,vdot
+                #x, y, th,w, v, vdot
                 [0, 0, 0, 0, 1, 0],  # v
                 [0, 0, 0, 1, 0, 0],  # w
                 [0, 0, 0, 0, 0, 1],  # ax
