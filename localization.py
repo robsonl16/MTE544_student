@@ -119,9 +119,14 @@ class localization(Node):
         # Part 4: log your data
         self.loc_logger.log_values(
             [
-                self.pose[0],
-                self.pose[1],
-                self.pose[2],
+                z[2],
+                z[3],
+                xhat[5],
+                xhat[3]*xhat[4],
+                xhat[4],
+                xhat[3],
+                xhat[0],
+                xhat[1],
                 Time.from_msg(self.pose[3]).nanoseconds,
             ]
         )
