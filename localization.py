@@ -71,6 +71,7 @@ class localization(Node):
 
         x = np.zeros(6)  # initial state vector [x, y, th, w, v, vdot]
 
+        # Update and tune these in lab
         Q = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # process noise covariance
 
         R = np.diag([0.1, 0.1, 0.1, 0.1])  # measurement noise covariance
@@ -83,8 +84,11 @@ class localization(Node):
         self.odom_sub = message_filters.Subscriber(
             self, odom, "/odom", qos_profile=odom_qos
         )
+        # TODO: Have to check if we need different qos for imu.
         self.imu_sub = message_filters.Subscriber(self, Imu, "/imu")
 
+        # Sync odom and imu messages to arrive at the same time
+        # TODO: Worst case is set to 0.1 seconds for slop. DT is set to 0.1. May have to adjust
         time_syncher = message_filters.ApproximateTimeSynchronizer(
             [self.odom_sub, self.imu_sub], queue_size=10, slop=0.1
         )
