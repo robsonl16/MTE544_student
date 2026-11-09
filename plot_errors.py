@@ -61,14 +61,19 @@ def plot_errors(filename):
     data = read_log(filename)
     time = (data["stamp"] - data["stamp"][0]) / 1e9
     if POSE_COLUMNS.issubset(data):
-        fig, axes = plt.subplots(3, 2, figsize=(13, 11), layout="constrained")
+        has_odom = {"odom_x", "odom_y"}.issubset(data)
+        rows = 5 if has_odom else 3
+        fig, axes = plt.subplots(rows, 2, figsize=(13, 3.6 * rows), layout="constrained")
         trajectory = axes[0, 0]
-        trajectory.plot(data["kf_x"], data["kf_y"], color="tab:blue")
+        trajectory.plot(data["kf_x"], data["kf_y"], color="tab:blue", label="EKF")
+        if has_odom:
+            trajectory.plot(data["odom_x"], data["odom_y"],
+                            color="tab:orange", linestyle="--", label="Odometry")
         trajectory.scatter(data["kf_x"][0], data["kf_y"][0],
                            color="green", label="Start", zorder=3)
         trajectory.scatter(data["kf_x"][-1], data["kf_y"][-1],
                            color="red", marker="x", label="End", zorder=3)
-        trajectory.set(title="Estimated robot trajectory", xlabel="x (m)", ylabel="y (m)")
+        trajectory.set(title="Robot trajectory", xlabel="x (m)", ylabel="y (m)")
         trajectory.set_aspect("equal", adjustable="datalim")
         trajectory.legend()
 
@@ -93,6 +98,40 @@ def plot_errors(filename):
         axes[2, 0].set(title="Estimated forward velocity", ylabel="Velocity (m/s)")
         axes[2, 1].plot(time, data["kf_w"], color="tab:purple")
         axes[2, 1].set(title="Estimated yaw rate", ylabel="Yaw rate (rad/s)")
+        if has_odom:
+            for ax, coordinate in zip(axes[3], ("x", "y")):
+                ax.plot(time, data["odom_" + coordinate], label="Odometry",
+                        color="tab:orange", linestyle="--")
+                ax.plot(time, data["kf_" + coordinate], label="EKF", color="tab:blue")
+                ax.set(title=f"{coordinate} position comparison", ylabel=f"{coordinate} (m)")
+                ax.legend()
+
+            heading = axes[4, 0]
+            # Legacy logger names: odom_z is quaternion z and odom_theta is
+            # quaternion w, not yaw. This conversion assumes planar rotation
+            # (quaternion x=y=0); full 3D orientation needs all four components.
+            if {"odom_z", "odom_theta"}.issubset(data):
+                z, w = data["odom_z"], data["odom_theta"]
+                norm = np.hypot(z, w)
+                if np.any(norm == 0):
+                    raise ValueError("odometry quaternion z/w has zero norm")
+                yaw = np.unwrap(2 * np.arctan2(z / norm, w / norm))
+                heading.plot(time, yaw, label="Odometry (planar quaternion)",
+                             color="tab:orange", linestyle="--")
+                heading.legend()
+            else:
+                heading.text(0.5, 0.5, "No odometry orientation columns",
+                             ha="center", va="center", transform=heading.transAxes)
+            if "kf_theta" in data:
+                heading.plot(time, np.unwrap(data["kf_theta"]), label="EKF", color="tab:blue")
+                heading.legend()
+            heading.set(title="Heading (unwrapped)", ylabel="Yaw (rad)")
+
+            separation = np.hypot(data["kf_x"] - data["odom_x"],
+                                  data["kf_y"] - data["odom_y"])
+            axes[4, 1].plot(time, separation, color="tab:red")
+            axes[4, 1].set(title="EKF–odometry position difference (not ground-truth error)",
+                           ylabel="Position difference (m)")
         for ax in axes.flat:
             if ax is not trajectory:
                 ax.set_xlabel("Elapsed time (s)")
