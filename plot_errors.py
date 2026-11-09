@@ -14,6 +14,12 @@ from pathlib import Path
 
 import numpy as np
 
+# Offline reference settings; keep these consistent with the recorded run.
+COMMAND_RATE_HZ = 10.0
+SPIRAL_SPEED_INCREMENT = 0.005
+SPIRAL_MAX_SPEED = 0.6
+SPIRAL_YAW_RATE = 1.0
+
 
 POSE_COLUMNS = {
     "imu_ax", "imu_ay", "kf_ax", "kf_ay", "kf_vx", "kf_w", "kf_x", "kf_y"
@@ -58,8 +64,8 @@ def read_log(filename):
 def ideal_spiral(time, start_delay=0.0, start_pose=(0.0, 0.0, 0.0)):
     """Integrate the nominal decisions.py spiral commands exactly between ticks.
 
-    First command is v=0.01 m/s, w=1 rad/s; v increases by 0.01 every
-    0.1 s, capped at 1 m/s. Start delay is seconds after the first CSV stamp.
+    Uses the offline reference settings above. Start delay is
+    seconds after the first CSV stamp.
     This is an ideal command reference, not measured ground truth. Timer
     delays, wheel slip, actuator dynamics and sensor noise are not modeled.
     """
@@ -70,22 +76,30 @@ def ideal_spiral(time, start_delay=0.0, start_pose=(0.0, 0.0, 0.0)):
         raise ValueError("spiral start delay must be nonnegative")
     x0, y0, yaw0 = start_pose
     elapsed = np.maximum(time - start_delay, 0.0)
-    # At tick 99 the command reaches the cap and stays constant thereafter.
-    ticks = np.arange(100) / 10.0
-    speed = np.minimum((np.arange(100) + 1) * 0.01, 1.0)
-    angles = yaw0 + ticks
-    dx = speed[:-1] * (np.sin(angles[1:]) - np.sin(angles[:-1]))
-    dy = speed[:-1] * (np.cos(angles[:-1]) - np.cos(angles[1:]))
+    count = int(np.ceil(SPIRAL_MAX_SPEED / SPIRAL_SPEED_INCREMENT))
+    ticks = np.arange(count) / COMMAND_RATE_HZ
+    speed = np.minimum((np.arange(count) + 1) * SPIRAL_SPEED_INCREMENT, SPIRAL_MAX_SPEED)
+    angles = yaw0 + SPIRAL_YAW_RATE * ticks
+    if SPIRAL_YAW_RATE == 0:
+        dx = speed[:-1] * np.cos(yaw0) / COMMAND_RATE_HZ
+        dy = speed[:-1] * np.sin(yaw0) / COMMAND_RATE_HZ
+    else:
+        dx = speed[:-1] / SPIRAL_YAW_RATE * (np.sin(angles[1:]) - np.sin(angles[:-1]))
+        dy = speed[:-1] / SPIRAL_YAW_RATE * (np.cos(angles[:-1]) - np.cos(angles[1:]))
     x_at_tick = x0 + np.r_[0.0, np.cumsum(dx)]
     y_at_tick = y0 + np.r_[0.0, np.cumsum(dy)]
-    index = np.minimum(np.floor(elapsed * 10).astype(int), 99)
-    yaw = yaw0 + elapsed
-    x = x_at_tick[index] + speed[index] * (np.sin(yaw) - np.sin(angles[index]))
-    y = y_at_tick[index] + speed[index] * (np.cos(angles[index]) - np.cos(yaw))
+    index = np.minimum(np.floor(elapsed * COMMAND_RATE_HZ).astype(int), count - 1)
+    yaw = yaw0 + SPIRAL_YAW_RATE * elapsed
+    if SPIRAL_YAW_RATE == 0:
+        x = x_at_tick[index] + speed[index] * (elapsed - ticks[index]) * np.cos(yaw0)
+        y = y_at_tick[index] + speed[index] * (elapsed - ticks[index]) * np.sin(yaw0)
+    else:
+        x = x_at_tick[index] + speed[index] / SPIRAL_YAW_RATE * (np.sin(yaw) - np.sin(angles[index]))
+        y = y_at_tick[index] + speed[index] / SPIRAL_YAW_RATE * (np.cos(angles[index]) - np.cos(yaw))
     moving = time >= start_delay
     return {"x": x, "y": y, "theta": yaw,
             "vx": np.where(moving, speed[index], 0.0),
-            "w": moving.astype(float)}
+            "w": moving.astype(float) * SPIRAL_YAW_RATE}
 
 
 def plot_errors(filename, *, with_ideal_spiral=False, spiral_start_delay=0.0,
