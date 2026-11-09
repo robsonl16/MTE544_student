@@ -14,6 +14,7 @@ from geometry_msgs.msg import Twist
 
 from rclpy.qos import QoSProfile
 from nav_msgs.msg import Odometry as odom
+from rclpy.qos import QoSProfile, HistoryPolicy, ReliabilityPolicy, DurabilityPolicy
 
 from sensor_msgs.msg import Imu
 from kalman_filter import kalman_filter
@@ -25,8 +26,10 @@ import message_filters
 
 rawSensors = 0
 kalmanFilter = 1
-odom_qos = QoSProfile(reliability=2, durability=2, history=1, depth=10)
-
+# odom_qos = QoSProfile(reliability=2, durability=2, history=1, depth=10)
+odom_qos = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, durability=DurabilityPolicy.VOLATILE, history=HistoryPolicy.KEEP_LAST, depth=10)
+imu_qos = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, durability=DurabilityPolicy.VOLATILE, history=HistoryPolicy.KEEP_LAST, depth=10)
+# imu_qos = QoSProfile(reliability=2, durability=2, history=1, depth=10)_
 
 class localization(Node):
     def __init__(
@@ -76,9 +79,9 @@ class localization(Node):
         x = np.zeros(6)  # initial state vector [x, y, th, w, v, vdot]
 
         # Update and tune these in lab
-        Q = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])  # process noise covariance
+        Q = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1]) * 3 # process noise covariance
 
-        R = np.diag([0.1, 0.1, 0.1, 0.1])  # measurement noise covariance
+        R = np.diag([0.1, 0.1, 0.1, 0.1]) * 5  # measurement noise covariance
 
         P = np.eye(6) * 0.1  # initial covariance
 
@@ -89,7 +92,7 @@ class localization(Node):
             self, odom, "/odom", qos_profile=odom_qos
         )
         # TODO: Have to check if we need different qos for imu.
-        self.imu_sub = message_filters.Subscriber(self, Imu, "/imu")
+        self.imu_sub = message_filters.Subscriber(self, Imu, "/imu", qos_profile=imu_qos)
 
         # Sync odom and imu messages to arrive at the same time
         # TODO: Worst case is set to 0.1 seconds for slop. DT is set to 0.1. May have to adjust
