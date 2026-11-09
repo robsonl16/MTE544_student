@@ -79,7 +79,7 @@ class localization(Node):
         x = np.zeros(6)  # initial state vector [x, y, th, w, v, vdot]
 
         # Update and tune these in lab
-        Q = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1]) * 3 # process noise covariance
+        Q = np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1]) * 1 # process noise covariance
 
         R = np.diag([0.1, 0.1, 0.1, 0.1]) * 5  # measurement noise covariance
 
