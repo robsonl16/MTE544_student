@@ -43,6 +43,10 @@ class localization(Node):
             "kf_w",
             "kf_x",
             "kf_y",
+            "odom_x",
+            "odom_y",
+            "odom_z",
+            "odom_theta",
             "stamp",
         ],
     ):
@@ -131,6 +135,10 @@ class localization(Node):
                 xhat[3],
                 xhat[0],
                 xhat[1],
+                odom_msg.pose.pose.position.x,
+                odom_msg.pose.pose.position.y,
+                odom_msg.pose.pose.orientation.z,
+                odom_msg.pose.pose.orientation.w,
                 Time.from_msg(self.pose[3]).nanoseconds,
             ]
         )
