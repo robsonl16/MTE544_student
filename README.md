@@ -151,6 +151,40 @@ In a maximum of 3 pages (excluding the front page), report the performance of th
 * Provide your understanding of the algorithm provided for the EKF and report on your derivations of the matrices, including the process model and measurement model. 
 * Results of the EKF implementation, compare the measured and estimated. Perform this comparison considering different cases of the covariance matrices as specified in Part 4. The plots should have, title, label name for the axis, legends, different shapes/colors for each line, and grids. 
 
+## Plotting CSV logs
+
+Plot and save localization logs without ROS:
+
+```bash
+python3 plot_errors.py --files sim/robotPose.csv --no-show
+```
+
+For spiral runs, overlay the ideal command path and compare EKF and odometry
+positions against it:
+
+```bash
+python3 plot_errors.py --files sim/robotPose.csv --ideal-spiral --no-show
+```
+
+This saves `sim/robotPose_ideal_spiral.png`. The ideal model matches the nominal
+commands in `decisions.py`: speed starts at 0.01 m/s and increases by 0.01 m/s
+every 0.1 seconds until 1 m/s, with constant yaw rate of 1 rad/s. Position is
+integrated analytically over each constant-command interval.
+
+By default, the first command starts at the first CSV timestamp at pose
+`(0, 0, 0)`. Use `--spiral-start-delay SECONDS` and
+`--spiral-start-pose X Y YAW` (metres, metres, radians) to set the known initial
+conditions. All compared poses must use the same coordinate frame. The plot
+reports position RMSE relative to the ideal path, not measured ground truth:
+timer delays and imperfect command tracking also contribute to this difference.
+The model assumes the nominal 10 Hz command rate; irregular callbacks or a
+different simulator time rate can invalidate that timing assumption. It does
+not fit the reference to the measured trajectory.
+
+Odometry comparisons appear automatically when `odom_x` and `odom_y` are
+present. Older logs still work. Use `--format pdf` for report figures and
+`--output-dir plots` to choose a destination directory.
+
 ## Submission
 
 Submit the report on Crowdmark and the code on Dropbox (LEARN) in the corresponding folder. Only one submission per group on each platform is needed:
