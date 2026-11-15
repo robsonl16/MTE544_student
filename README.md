@@ -1,5 +1,6 @@
 # LAB 3 - Localization
-
+## Reading data files
+Data was collected with the spiral motion. robotPose_01_03.csv corresponds to Q = diag(0.1) and R = diag(0.3)
 ## Introduction
 
 Welcome to LAB 3 of the mobile robotics course! 

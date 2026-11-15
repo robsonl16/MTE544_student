@@ -16,15 +16,17 @@ class kalman_filter:
     # Part 3: Replace the matrices with Jacobians where needed
     def predict(self):
         """
-        need to run the motion model to get new state,
-        then after that calculate the jacobian of the motion model
-        to get A, then update P
+        Calculate the jacobian of the motion model,
+        then run the motion model to get new state,
+        then calculate the jacobian of the measurement model,
+        then update the covariance matrix P
         """
+
         self.A = self.jacobian_A()  # calculate jacobian for motion model
         self.motion_model()  # run the motion model for one step
-        self.C = self.jacobian_H()  # calculate jacobian for measurement model
+        self.C = self.jacobian_H()  # calculate jacobian for measurement model after updating the state
 
-        self.P = np.dot(np.dot(self.A, self.P), self.A.T) + self.Q
+        self.P = np.dot(np.dot(self.A, self.P), self.A.T) + self.Q #EKF State Covariance Prediction P = A*P*A' + Q
 
     # Part 3: Calculate the Kalman gain and correct your estimates
     def update(self, z):
@@ -33,17 +35,18 @@ class kalman_filter:
         then updating the state
         then updating the covariance matrix
         """
-        # predicted measurement and how far it was
+        # predicted measurement and how far off it was
         innovation = z - self.measurement_model()
 
         # innovation covariance: predicted uncertainty in measurement + sensor noise
         S = self.C @ self.P @ self.C.T + self.R
 
+        # calculate the Kalman gain, hoe much to trust the measurement vs the prediction
         kalman_gain = self.P @ self.C.T @ np.linalg.inv(S)
 
         self.x = self.x + kalman_gain @ innovation
 
-        # reduce uncertainty to account for measurement
+        # Covariance correction, reduce uncertainty to account for measurement (I - K*C) shrinks P
         self.P = np.array(np.eye(len(self.x)) - kalman_gain @ self.C) @ self.P
 
     # Part 3: Implement here the measurement model
@@ -51,9 +54,9 @@ class kalman_filter:
         x, y, th, w, v, vdot = self.x
         return np.array(
             [
-                v,  # v
-                w,  # w
-                vdot,  # ax
+                v,      # v
+                w,      # w
+                vdot,   # ax
                 v * w,  # ay
             ]
         )
@@ -66,9 +69,10 @@ class kalman_filter:
         x, y, th, w, v, vdot = self.x
         dt = self.dt
 
+        #using euler integration to update the states based on the motion model equations
         self.x = np.array(
             [
-                x + v * np.cos(th) * dt,
+                x + v * np.cos(th) * dt, 
                 y + v * np.sin(th) * dt,
                 th + w * dt,
                 w,
@@ -91,15 +95,16 @@ class kalman_filter:
         x, y, th, w, v, vdot = self.x
         dt = self.dt
 
+        # Jacobian of the motion model with respect to the state variables (x, y, th, w, v, vdot)
         return np.array(
             [
-                # x, y,  th,                      w,    v,             vdot
-                [1, 0, -v * np.sin(th) * dt, 0, np.cos(th) * dt, 0],
-                [0, 1, v * np.cos(th) * dt, 0, np.sin(th) * dt, 0],
-                [0, 0, 1, dt, 0, 0],
-                [0, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 1, dt],
-                [0, 0, 0, 0, 0, 1],
+                # x, y, th,                      w,    v,             vdot
+                [1, 0, -v * np.sin(th) * dt,    0,     np.cos(th) * dt, 0],
+                [0, 1, v * np.cos(th) * dt,     0,     np.sin(th) * dt, 0],
+                [0, 0, 1,                       dt,    0,               0],
+                [0, 0, 0,                       1,     0,               0],
+                [0, 0, 0,                       0,     1,              dt],
+                [0, 0, 0,                       0,     0,               1],
             ]
         )
 

@@ -91,11 +91,11 @@ class localization(Node):
         self.odom_sub = message_filters.Subscriber(
             self, odom, "/odom", qos_profile=odom_qos
         )
-        # TODO: Have to check if we need different qos for imu.
+        # Have to check if we need different qos for imu.
         self.imu_sub = message_filters.Subscriber(self, Imu, "/imu", qos_profile=imu_qos)
 
         # Sync odom and imu messages to arrive at the same time
-        # TODO: Worst case is set to 0.1 seconds for slop. DT is set to 0.1. May have to adjust
+        # Worst case is set to 0.1 seconds for slop. DT is set to 0.1. May have to adjust
         time_syncher = message_filters.ApproximateTimeSynchronizer(
             [self.odom_sub, self.imu_sub], queue_size=10, slop=0.1
         )
