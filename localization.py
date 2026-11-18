@@ -38,7 +38,7 @@ class localization(Node):
         self.pose=None
         
         if type==rawSensors:
-            self.initRawSensors();
+            self.initRawSensors()
         elif type==kalmanFilter:
             self.initKalmanfilter()
             self.kalmanInitialized = False
@@ -71,11 +71,11 @@ class localization(Node):
                         0,
                         0])        
             
-            # TODO PART 5 Put the Q and R matrices
+            # PART 5 Put the Q and R matrices
             # that you conclude from lab Three
-            Q=...
-            R=...
-            P=...
+            Q= np.diag([0.1, 0.1, 0.1, 0.1, 0.1, 0.1]) * 10 #process noise covariance matrix
+            R= np.diag([0.1, 0.1, 0.1, 0.1]) * 5 #measurement noise covariance matrix
+            P=np.eye(6) * 0.1 #initial covariance matrix
                         
             self.kf=kalman_filter(P,Q,R, x)
             
