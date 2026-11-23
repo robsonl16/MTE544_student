@@ -2,6 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import sqrt
 
+# Cost-map cells above this are treated as walls. Lower = wider no-go zone.
+# With laser_sig=0.3: 0.8 -> ~0.20 m, 0.6 -> ~0.30 m, 0.4 -> ~0.41 m clearance.
+WALL_THRESHOLD = 0.6
+# Extra g-cost per unit of cost-map value, pushes paths toward the middle of free space.
+# 0 = pure shortest path (hugs walls). Units are cells.
+OBSTACLE_COST_WEIGHT = 20.0
+
 
 class Node:
     """
@@ -176,7 +183,7 @@ def search(maze, start, end, use_euclidean=True):
                 continue
 
             # Make sure walkable terrain
-            if maze[node_position[0], node_position[1]] > 0.8:
+            if maze[node_position[0], node_position[1]] > WALL_THRESHOLD:
                 continue
 
             # Create new node
@@ -195,6 +202,8 @@ def search(maze, start, end, use_euclidean=True):
 
             # TODO PART 4 Create the f, g, and h values
             child.g = current_node.g + heuristic_distance(child.position, current_node.position, True) #parent g + distance from parent to child (1 for straight move, sqrt(2) for diagonal move)
+            # penalty for cells near obstacles so the path keeps its distance (h stays admissible, penalty >= 0)
+            child.g += OBSTACLE_COST_WEIGHT * maze[child.position[0], child.position[1]]
             # Heuristic costs calculated here, this is using eucledian distance
             child.h = heuristic_distance(child.position, end_node.position, use_euclidean)
 
