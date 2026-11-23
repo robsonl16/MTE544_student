@@ -101,7 +101,18 @@ class localization(Node):
                             xhat[1],
                             normalize_angle(xhat[2]),
                             odom_msg.header.stamp])
-        
+
+        # xhat = [x, y, th, w, v, vdot], the filter's predicted accelerations are vdot and v*w
+        self.loc_logger.log_values([imu_msg.linear_acceleration.x,
+                                    imu_msg.linear_acceleration.y,
+                                    xhat[5],
+                                    xhat[4]*xhat[3],
+                                    xhat[4],
+                                    xhat[3],
+                                    xhat[0],
+                                    xhat[1],
+                                    Time.from_msg(odom_msg.header.stamp).nanoseconds])
+
     def odom_callback(self, pose_msg):
         
         self.pose=[ pose_msg.pose.pose.position.x,

@@ -3,7 +3,7 @@
 import sys
 
 
-from utilities import euler_from_quaternion, calculate_angular_error, calculate_linear_error
+from utilities import euler_from_quaternion, calculate_angular_error, calculate_linear_error, Logger
 from pid import PID_ctrl
 
 from rclpy import init, spin, spin_once
@@ -85,6 +85,14 @@ class decision_maker(Node):
         
         self.goal=self.planner.plan([self.localizer.getPose()[0], self.localizer.getPose()[1]],
                                      [msg.pose.position.x, msg.pose.position.y])
+
+        # log the planned path, overwritten every time a new goal is given
+        if self.goal is not None:
+            path_logger=Logger("plannedPath.csv", ["x", "y"])
+            # the point planner returns a single [x, y], the trajectory planner a list of them
+            path=self.goal if isinstance(self.goal[0], (list, tuple)) else [self.goal]
+            for point in path:
+                path_logger.log_values([point[0], point[1]])
 
     
     def timerCallback(self):

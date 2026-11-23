@@ -182,8 +182,11 @@ def search(maze, start, end, use_euclidean=True):
             if not ((0 <= node_position[0] < no_rows) and (0 <= node_position[1] < no_columns)):
                 continue
 
-            # Make sure walkable terrain
-            if maze[node_position[0], node_position[1]] > WALL_THRESHOLD:
+            # Make sure walkable terrain. A cell over the threshold is still allowed if it is
+            # lower cost than the current one, so a start that sits too close to a wall can
+            # step away from it instead of being boxed in.
+            child_cost = maze[node_position[0], node_position[1]]
+            if child_cost > WALL_THRESHOLD and child_cost >= maze[current_node.position[0], current_node.position[1]]:
                 continue
 
             # Create new node
