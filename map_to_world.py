@@ -1,4 +1,4 @@
-"""Turn a nav2 map (room.yaml + room.pgm) into an Ignition Gazebo world with the walls extruded.
+"""Turn a nav2 map (room.yaml + room.pgm) into a Gazebo Classic world with the walls extruded.
 
 usage: python3 map_to_world.py room.yaml        -> writes room.sdf (world name "room")
 """
@@ -72,20 +72,12 @@ def box_sdf(i: int, x: float, y: float, sx: float, sy: float) -> str:
 
 
 def world_sdf(name: str, walls: str) -> str:
-    plugin = '<plugin filename="ignition-gazebo-{0}-system" name="ignition::gazebo::systems::{1}"/>'
-    plugins = "\n".join(plugin.format(f, n) for f, n in [
-        ("physics", "Physics"), ("user-commands", "UserCommands"),
-        ("scene-broadcaster", "SceneBroadcaster"), ("contact", "Contact")])
+    # Gazebo Classic 11 (ROS Humble + TurtleBot3)
     return f"""<?xml version="1.0"?>
-<sdf version="1.8">
+<sdf version="1.6">
 <world name="{name}">
-{plugins}
-<plugin filename="ignition-gazebo-sensors-system" name="ignition::gazebo::systems::Sensors"><render_engine>ogre2</render_engine></plugin>
-<light type="directional" name="sun"><cast_shadows>false</cast_shadows><pose>0 0 10 0 0 0</pose><direction>-0.5 0.1 -0.9</direction></light>
-<model name="ground_plane"><static>true</static><link name="link">
-<collision name="c"><geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry></collision>
-<visual name="v"><geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry></visual>
-</link></model>
+<include><uri>model://sun</uri></include>
+<include><uri>model://ground_plane</uri></include>
 <model name="walls"><static>true</static><link name="link">
 {walls}</link></model>
 </world>
