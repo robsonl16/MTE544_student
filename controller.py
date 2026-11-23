@@ -9,6 +9,17 @@ M_PI=3.1415926535
 
 P=0; PD=1; PI=2; PID=3
 
+MAX_LINEAR_VEL=0.22   # m/s, TurtleBot3 burger top speed
+MAX_ANGULAR_VEL=0.5   # rad/s
+ALIGN_SLOPE=1.75     # how sharply speed drops off with heading error
+ALIGN_OFFSET=2.75    # speed is halved at |e| = OFFSET/SLOPE (~1.57 rad, 90 deg)
+
+
+def alignment_gate(e_ang):
+    # 0.5 tanh(-1.75|e| + 2.75) + 0.5: ~1 when facing the goal, ~0 when it is behind
+    # abs() so left and right heading errors slow the robot the same way
+    return 0.5 * np.tanh(-ALIGN_SLOPE * abs(e_ang) + ALIGN_OFFSET) + 0.5
+
 class controller:
     
     
@@ -56,8 +67,8 @@ class trajectoryController(controller):
         linear_vel=self.PID_linear.update([e_lin, pose[3]], status)
         angular_vel=self.PID_angular.update([e_ang, pose[3]], status) 
 
-        linear_vel = 0.1 if linear_vel > 0.1 else linear_vel
-        angular_vel = float(np.clip(angular_vel, -0.5, 0.5))  # was positive-only, right turns were uncapped
+        linear_vel = min(linear_vel, MAX_LINEAR_VEL) * alignment_gate(e_ang)
+        angular_vel = float(np.clip(angular_vel, -MAX_ANGULAR_VEL, MAX_ANGULAR_VEL))
 
 
         return linear_vel, angular_vel
