@@ -57,8 +57,8 @@ class decision_maker(Node):
         
         elif motion_type==TRAJECTORY_PLANNER:
             # PART 5 Put the gains that you concluded from lab 2
-            self.controller=trajectoryController(klp=0.025, klv=0.15, kli=0.15, kap=1.0, kav=0.125, kai=0.05)      
-            self.planner=planner(TRAJECTORY_PLANNER)
+            self.controller=trajectoryController(klp=0.025, klv=0.15, kli=0.15, kap=1.0, kav=0.125, kai=0.05, lookAhead=0.35)      
+            self.planner=planner(TRAJECTORY_PLANNER, mapName="prev_map/room")
         
         else:
             print("Error! you don't have this type of planner", file=sys.stderr)
