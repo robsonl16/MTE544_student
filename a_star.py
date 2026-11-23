@@ -4,10 +4,10 @@ from math import sqrt
 
 # Cost-map cells above this are treated as walls. Lower = wider no-go zone.
 # With laser_sig=0.3: 0.8 -> ~0.20 m, 0.6 -> ~0.30 m, 0.4 -> ~0.41 m clearance.
-WALL_THRESHOLD = 0.6
+WALL_THRESHOLD = 0.7
 # Extra g-cost per unit of cost-map value, pushes paths toward the middle of free space.
 # 0 = pure shortest path (hugs walls). Units are cells.
-OBSTACLE_COST_WEIGHT = 20.0
+OBSTACLE_COST_WEIGHT = 5.0
 
 
 class Node:
