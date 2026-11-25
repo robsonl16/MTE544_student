@@ -67,7 +67,7 @@ class trajectoryController(controller):
         linear_vel=self.PID_linear.update([e_lin, pose[3]], status)
         angular_vel=self.PID_angular.update([e_ang, pose[3]], status) 
 
-        linear_vel = min(linear_vel, MAX_LINEAR_VEL) * alignment_gate(e_ang)
+        # linear_vel = min(linear_vel, MAX_LINEAR_VEL) * alignment_gate(e_ang)
         angular_vel = float(np.clip(angular_vel, -MAX_ANGULAR_VEL, MAX_ANGULAR_VEL))
 
 
