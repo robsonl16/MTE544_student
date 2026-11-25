@@ -48,7 +48,7 @@ class planner:
         endPose=self.m_utilites.position_2_cell(endPoseCart)
         
         # PART 5 convert the cell pixels into the cartesian coordinates
-        pixel_path = search(self.costMap, startPose, endPose, use_euclidean=True)
+        pixel_path = search(self.costMap, startPose, endPose, use_euclidean=False)
         if pixel_path is None:
             print("no path found, pick a goal in open space")
             return None

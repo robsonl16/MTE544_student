@@ -9,7 +9,7 @@ M_PI=3.1415926535
 
 P=0; PD=1; PI=2; PID=3
 
-MAX_LINEAR_VEL=0.22   # m/s, TurtleBot3 burger top speed
+MAX_LINEAR_VEL=0.5   # m/s, TurtleBot3 burger top speed
 MAX_ANGULAR_VEL=0.5   # rad/s
 ALIGN_SLOPE=1.75     # how sharply speed drops off with heading error
 ALIGN_OFFSET=2.75    # speed is halved at |e| = OFFSET/SLOPE (~1.57 rad, 90 deg)
